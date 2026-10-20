@@ -162,7 +162,7 @@ function Dashboard({ go }: { go: (p: Page) => void }) {
     <div className="welcome"><div><span className="eyebrow">سلام، آرمان</span><h2>امروز یک قدم جلوتر برو.</h2></div><div className="level"><span>سطح فعلی</span><b>کاوشگر</b></div></div>
     <div className="dashboard-grid">
       <section className="today-card"><span className="pill">تمرین امروز · ۱۰ دقیقه</span><h3>تماس چشمی قدرتمند</h3><p>در سه گفت‌وگوی امروز، تماس چشمی را یک ثانیه بیشتر حفظ کن.</p><div className="card-row"><Button onClick={() => go("lesson")}>شروع تمرین <Icon name="arrow"/></Button><div className="day-count"><b>۱۲</b><span>روز پیوسته</span></div></div></section>
-      <section className="progress-card"><div className="ring"><div><b>۳۸٪</b><span>پیشرفت کل</span></div></div><div><span>مسیر یادگیری</span><h3>اعتماد‌به‌نفس</h3><p>۴ از ۱۲ درس کامل شده</p><div className="progress"><i/></div></div></section>
+      <section className="progress-card"><div className="ring"><div><b>۳۸٪</b><span>پیشرفت کل</span></div></div><div><span>مسیر یادگیری</span><h3>اعتماد‌به‌نفس</h3><p>۴ از ۱۵ درس کامل شده</p><div className="progress"><i/></div></div></section>
     </div>
     <div className="section-head"><h3>ادامه مسیر</h3><button onClick={() => go("lesson")}>مشاهده همه</button></div>
     <div className="lesson-row"><span>۰۵</span><div><small>فصل اول · اعتماد‌به‌نفس</small><h3>صدایی که شنیده می‌شود</h3><p>کنترل تنفس، ریتم و قدرت صدا</p></div><Button onClick={() => go("lesson")} ghost><Icon name="play"/> ادامه درس</Button></div>
