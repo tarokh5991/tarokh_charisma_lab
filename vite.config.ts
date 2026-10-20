@@ -3,6 +3,6 @@ import react from "@vitejs/plugin-react";
 import tailwindcss from "@tailwindcss/vite";
 
 export default defineConfig({
-  base: process.env.GITHUB_ACTIONS ? "/tarokh_charisma_lab/" : "/",
+  base: process.env.GITHUB_ACTIONS ? "/tarokh_charisma_lab_test/" : "/",
   plugins: [react(), tailwindcss()],
 });
