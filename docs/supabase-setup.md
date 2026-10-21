@@ -9,7 +9,7 @@ VITE_SUPABASE_URL=https://<project-ref>.supabase.co
 VITE_SUPABASE_ANON_KEY=<anon-key>
 ```
 
-`.env.example` فقط نام متغیرهای موردنیاز را نگه می‌دارد.
+مقدار `VITE_SUPABASE_URL` را بهتر است به‌صورت URL کامل وارد کنید؛ کد Project Ref تنها را هم به‌صورت خودکار به URL استاندارد تبدیل می‌کند.
 
 ## تنظیم در محیط توسعه
 

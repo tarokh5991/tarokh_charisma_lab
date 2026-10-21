@@ -139,7 +139,7 @@ function Auth({ go, onAuthenticated }: { go: (p: Page) => void; onAuthenticated:
     R:["ایجاد ارتباط","شروع و ادامه‌دادن ارتباط برایت طبیعی‌تر می‌شود."],
   };
   const submitOtp=async(isSignup=false)=>{
-    if(!identifier.trim() || (isSignup && !username.trim())) return;
+    if(!identifier.trim() || !username.trim()) return;
     setBusy(true); setMessage("");
     try {
       await requestOtp(identifier.trim(), accountTab, isSignup ? username : undefined);
@@ -153,6 +153,8 @@ function Auth({ go, onAuthenticated }: { go: (p: Page) => void; onAuthenticated:
     setBusy(true); setMessage("");
     try {
       const session=await verifyOtp(identifier.trim(), otp.trim(), accountTab);
+      const savedUsername=session.user.user_metadata?.username || session.user.user_metadata?.display_name;
+      if(savedUsername && savedUsername.trim().toLowerCase()!==username.trim().toLowerCase()) throw new Error("نام کاربری با این حساب مطابقت ندارد.");
       saveSession(session);
       onAuthenticated(session);
       go("dashboard");
@@ -165,9 +167,9 @@ function Auth({ go, onAuthenticated }: { go: (p: Page) => void; onAuthenticated:
     <span className="eyebrow">{login?"ورود امن با کد یک‌بارمصرف":"آخرین قدم"}</span>
     <h2>{login?"ورود به حساب":"ساخت حساب"}</h2>
     <div className="auth-tabs"><button className={accountTab==="mobile"?"active":""} onClick={()=>setAccountTab("mobile")}>شماره موبایل</button><button className={accountTab==="email"?"active":""} onClick={()=>setAccountTab("email")}>ایمیل</button></div>
-    {!login&&<label>نام کاربری<input value={username} onChange={event=>setUsername(event.target.value)} dir="ltr" autoComplete="username" placeholder="مثلاً arman"/></label>}
+    <label>نام کاربری<input value={username} onChange={event=>setUsername(event.target.value)} dir="ltr" autoComplete="username" placeholder="مثلاً arman"/></label>
     {accountTab==="mobile"?<label>شماره موبایل<input value={identifier} onChange={event=>setIdentifier(event.target.value)} dir="ltr" inputMode="tel" autoComplete="tel" placeholder="0912 000 0000"/> </label>:<label>ایمیل<input value={identifier} onChange={event=>setIdentifier(event.target.value)} dir="ltr" type="email" autoComplete="email" placeholder="name@example.com"/></label>}
-    <Button block onClick={()=>submitOtp(!login)} disabled={busy||!identifier.trim()||(!login&& !username.trim())}>{busy?"در حال ارسال…":login?"دریافت کد ورود":"دریافت کد"} <Icon name="arrow"/></Button>
+    <Button block onClick={()=>submitOtp(!login)} disabled={busy||!identifier.trim()||!username.trim()}>{busy?"در حال ارسال…":login?"دریافت کد ورود":"دریافت کد"} <Icon name="arrow"/></Button>
     {message&&<p className="auth-message">{message}</p>}
     {!login&&<small>پاسخ‌های تو فقط برای شخصی‌سازی مسیرت استفاده می‌شود.</small>}
   </>;
