@@ -39,6 +39,10 @@ VITE_SUPABASE_ANON_KEY=<anon-key>
 
 `supabase/migrations/20261020201500_initial_mvp_schema.sql`
 
+بعد از آن، migration نام کاربری را نیز اجرا کنید:
+
+`supabase/migrations/20261021150000_add_usernames.sql`
+
 این migration نقش‌های کاربری، پلن‌ها، محتوا، ارزیابی CLEAR، پیشرفت آموزشی، سفارش‌ها، دسترسی‌ها، گفتگوهای مربی، سهمیهٔ ماهانه و منتورینگ را ایجاد می‌کند. همچنین RLS فعال است؛ دادهٔ کاربر فقط برای همان کاربر قابل دسترسی است.
 
 ## گام بعدی

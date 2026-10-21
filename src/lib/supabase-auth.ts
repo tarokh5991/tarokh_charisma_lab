@@ -6,7 +6,7 @@ export type AuthSession = {
   access_token: string;
   refresh_token: string;
   expires_at?: number;
-  user: { id: string; email?: string; phone?: string };
+  user: { id: string; email?: string; phone?: string; user_metadata?: { username?: string; display_name?: string } };
 };
 
 function requireConfig() {
@@ -33,21 +33,35 @@ async function request(path: string, body: Record<string, unknown>) {
   });
 
   if (!response.ok) {
-    const payload = await response.json().catch(() => null) as { msg?: string; error_description?: string } | null;
-    throw new Error(payload?.msg || payload?.error_description || "درخواست انجام نشد. دوباره تلاش کن.");
+    const payload = await response.json().catch(() => null) as { msg?: string; message?: string; error?: string; error_description?: string } | null;
+    throw new Error(payload?.msg || payload?.message || payload?.error_description || payload?.error || "درخواست انجام نشد. دوباره تلاش کن.");
   }
 
   return response.json();
 }
 
-export function requestOtp(value: string, mode: AuthMode) {
-  return request("/auth/v1/otp", mode === "mobile" ? { phone: value, create_user: true } : { email: value, create_user: true });
+function normalizeIdentifier(value: string, mode: AuthMode) {
+  const normalized = value.trim().replace(/[۰-۹]/g, digit => String("۰۱۲۳۴۵۶۷۸۹".indexOf(digit))).replace(/[٠-٩]/g, digit => String("٠١٢٣٤٥٦٧٨٩".indexOf(digit)));
+  if (mode === "email") return normalized.toLowerCase();
+  const digits = normalized.replace(/[\s()-]/g, "");
+  if (digits.startsWith("09")) return `+98${digits.slice(1)}`;
+  if (digits.startsWith("9")) return `+98${digits}`;
+  return digits;
+}
+
+export function requestOtp(value: string, mode: AuthMode, username?: string) {
+  const identifier = normalizeIdentifier(value, mode);
+  const data = username?.trim() ? { username: username.trim(), display_name: username.trim() } : undefined;
+  return request("/auth/v1/otp", mode === "mobile"
+    ? { phone: identifier, create_user: true, ...(data ? { data } : {}) }
+    : { email: identifier, create_user: true, ...(data ? { data } : {}) });
 }
 
 export function verifyOtp(value: string, token: string, mode: AuthMode) {
+  const identifier = normalizeIdentifier(value, mode);
   return request("/auth/v1/verify", mode === "mobile"
-    ? { phone: value, token, type: "sms" }
-    : { email: value, token, type: "email" });
+    ? { phone: identifier, token, type: "sms" }
+    : { email: identifier, token, type: "email" });
 }
 
 export function getStoredSession(): AuthSession | null {

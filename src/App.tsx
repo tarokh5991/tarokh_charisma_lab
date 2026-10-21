@@ -23,11 +23,11 @@ const Button = ({ children, onClick, ghost = false, block = false, disabled = fa
   <button className={`btn ${ghost ? "btn-ghost" : ""} ${block ? "btn-block" : ""}`} onClick={onClick} disabled={disabled}>{children}</button>
 );
 
-const Header = ({ go, simple = false, authenticated = false, onLogout }: { go: (p: Page) => void; simple?: boolean; authenticated?: boolean; onLogout?: () => void }) => (
+const Header = ({ go, simple = false, authenticated = false, displayName, onLogout }: { go: (p: Page) => void; simple?: boolean; authenticated?: boolean; displayName?: string; onLogout?: () => void }) => (
   <header className="header">
     <button className="brand" onClick={() => go("home")}><span>TAROKH</span><small>CHARISMA LAB</small></button>
     {!simple && <nav><button onClick={() => go("home")}>خانه</button><button onClick={() => go("dashboard")}>آکادمی</button><button onClick={() => go("pricing")}>پلن‌ها</button><button onClick={() => go("about")}>درباره ما</button><button onClick={() => window.dispatchEvent(new Event("open-support"))}>پشتیبانی</button></nav>}
-    {authenticated ? <Button onClick={onLogout} ghost>خروج</Button> : <Button onClick={() => go("auth")} ghost>ورود / ثبت‌نام</Button>}
+    {authenticated ? <div className="account-actions"><span className="header-user">{displayName || "حساب من"}</span><Button onClick={onLogout} ghost>خروج</Button></div> : <Button onClick={() => go("auth")} ghost>ورود / ثبت‌نام</Button>}
   </header>
 );
 
@@ -106,6 +106,7 @@ function Auth({ go, onAuthenticated }: { go: (p: Page) => void; onAuthenticated:
   const [answers,setAnswers]=useState<string[][]>([[],[],[]]);
   const [accountTab,setAccountTab]=useState<"mobile"|"email">("mobile");
   const [identifier,setIdentifier]=useState("");
+  const [username,setUsername]=useState("");
   const [otp,setOtp]=useState("");
   const [message,setMessage]=useState("");
   const [busy,setBusy]=useState(false);
@@ -137,11 +138,11 @@ function Auth({ go, onAuthenticated }: { go: (p: Page) => void; onAuthenticated:
     A:["آگاهی اجتماعی","نشانه‌های رفتاری طرف مقابل را بهتر می‌خوانی."],
     R:["ایجاد ارتباط","شروع و ادامه‌دادن ارتباط برایت طبیعی‌تر می‌شود."],
   };
-  const submitOtp=async()=>{
-    if(!identifier.trim()) return;
+  const submitOtp=async(isSignup=false)=>{
+    if(!identifier.trim() || (isSignup && !username.trim())) return;
     setBusy(true); setMessage("");
     try {
-      await requestOtp(identifier.trim(), accountTab);
+      await requestOtp(identifier.trim(), accountTab, isSignup ? username : undefined);
       setView("verify");
     } catch (error) {
       setMessage(error instanceof Error ? error.message : "ارسال کد انجام نشد.");
@@ -164,8 +165,9 @@ function Auth({ go, onAuthenticated }: { go: (p: Page) => void; onAuthenticated:
     <span className="eyebrow">{login?"ورود امن با کد یک‌بارمصرف":"آخرین قدم"}</span>
     <h2>{login?"ورود به حساب":"ساخت حساب"}</h2>
     <div className="auth-tabs"><button className={accountTab==="mobile"?"active":""} onClick={()=>setAccountTab("mobile")}>شماره موبایل</button><button className={accountTab==="email"?"active":""} onClick={()=>setAccountTab("email")}>ایمیل</button></div>
-    {accountTab==="mobile"?<label>شماره موبایل<input value={identifier} onChange={event=>setIdentifier(event.target.value)} dir="ltr" inputMode="tel" placeholder="0912 000 0000"/> </label>:<label>ایمیل<input value={identifier} onChange={event=>setIdentifier(event.target.value)} dir="ltr" type="email" placeholder="name@example.com"/></label>}
-    <Button block onClick={submitOtp} disabled={busy||!identifier.trim()}>{busy?"در حال ارسال…":login?"دریافت کد ورود":"دریافت کد"} <Icon name="arrow"/></Button>
+    {!login&&<label>نام کاربری<input value={username} onChange={event=>setUsername(event.target.value)} dir="ltr" autoComplete="username" placeholder="مثلاً arman"/></label>}
+    {accountTab==="mobile"?<label>شماره موبایل<input value={identifier} onChange={event=>setIdentifier(event.target.value)} dir="ltr" inputMode="tel" autoComplete="tel" placeholder="0912 000 0000"/> </label>:<label>ایمیل<input value={identifier} onChange={event=>setIdentifier(event.target.value)} dir="ltr" type="email" autoComplete="email" placeholder="name@example.com"/></label>}
+    <Button block onClick={()=>submitOtp(!login)} disabled={busy||!identifier.trim()||(!login&& !username.trim())}>{busy?"در حال ارسال…":login?"دریافت کد ورود":"دریافت کد"} <Icon name="arrow"/></Button>
     {message&&<p className="auth-message">{message}</p>}
     {!login&&<small>پاسخ‌های تو فقط برای شخصی‌سازی مسیرت استفاده می‌شود.</small>}
   </>;
@@ -183,12 +185,12 @@ function Auth({ go, onAuthenticated }: { go: (p: Page) => void; onAuthenticated:
   </main></>;
 }
 
-function Dashboard({ go, onLogout }: { go: (p: Page) => void; onLogout: () => void }) {
+function Dashboard({ go, onLogout, displayName }: { go: (p: Page) => void; onLogout: () => void; displayName?: string }) {
   const [showLeaders,setShowLeaders]=useState(false);
   const [showMe,setShowMe]=useState(true);
   const leaders=[["ش","شاهین آرام","۱۴"],["ک","کاوشگر شب","۱۲"],["م","مرد مسیر","۱۱"],["ذ","ذهن روشن","۱۰"],["س","سرو استوار","۹"],["ر","رهرو آرام","۹"],["ن","نقطه شروع","۸"],["پ","پلنگ صبور","۷"],["ق","قاب طلایی","۷"],["گ","گام بعدی","۶"]];
-  return <><Header go={go} authenticated onLogout={onLogout}/><main className="app-page">
-    <div className="welcome"><div><span className="eyebrow">سلام، آرمان</span><h2>امروز یک قدم جلوتر برو.</h2></div><div className="level"><span>سطح فعلی</span><b>کاوشگر</b></div></div>
+  return <><Header go={go} authenticated displayName={displayName} onLogout={onLogout}/><main className="app-page">
+    <div className="welcome"><div><span className="eyebrow">سلام، {displayName || "دوست کاریزما"}</span><h2>امروز یک قدم جلوتر برو.</h2></div><div className="level"><span>سطح فعلی</span><b>کاوشگر</b></div></div>
     <div className="dashboard-grid">
       <section className="today-card"><span className="pill">تمرین امروز · ۱۰ دقیقه</span><h3>تماس چشمی قدرتمند</h3><p>در سه گفت‌وگوی امروز، تماس چشمی را یک ثانیه بیشتر حفظ کن.</p><div className="card-row"><Button onClick={() => go("lesson")}>شروع تمرین <Icon name="arrow"/></Button><div className="day-count"><b>۱۲</b><span>روز پیوسته</span></div></div></section>
       <section className="progress-card"><div className="ring"><div><b>۳۸٪</b><span>پیشرفت کل</span></div></div><div><span>مسیر یادگیری</span><h3>اعتماد‌به‌نفس</h3><p>۴ از ۱۵ درس کامل شده</p><div className="progress"><i/></div></div></section>
@@ -295,5 +297,6 @@ export default function App() {
     setSession(null);
     go("home");
   };
-  return <div dir="rtl">{page==="home"?<Home go={go}/>:page==="about"?<About go={go}/>:page==="auth"?<Auth go={go} onAuthenticated={setSession}/>:page==="dashboard"?<Dashboard go={go} onLogout={logout}/>:page==="lesson"?<Lesson go={go}/>:page==="coach"?<Coach go={go}/>:page==="pricing"?<Pricing go={go} choose={setPlan}/>:<Checkout go={go} plan={plan}/>}<SupportWidget showButton={page==="home"||page==="dashboard"}/></div>;
+  const displayName=session?.user.user_metadata?.username || session?.user.user_metadata?.display_name;
+  return <div dir="rtl">{page==="home"?<Home go={go}/>:page==="about"?<About go={go}/>:page==="auth"?<Auth go={go} onAuthenticated={setSession}/>:page==="dashboard"?<Dashboard go={go} displayName={displayName} onLogout={logout}/>:page==="lesson"?<Lesson go={go}/>:page==="coach"?<Coach go={go}/>:page==="pricing"?<Pricing go={go} choose={setPlan}/>:<Checkout go={go} plan={plan}/>}<SupportWidget showButton={page==="home"||page==="dashboard"}/></div>;
 }
