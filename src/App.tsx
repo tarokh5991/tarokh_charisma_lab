@@ -23,7 +23,9 @@ const Button = ({ children, onClick, ghost = false, block = false, disabled = fa
   <button className={`btn ${ghost ? "btn-ghost" : ""} ${block ? "btn-block" : ""}`} onClick={onClick} disabled={disabled}>{children}</button>
 );
 
-const Header = ({ go, simple = false, authenticated = false, displayName, onLogout }: { go: (p: Page) => void; simple?: boolean; authenticated?: boolean; displayName?: string; onLogout?: () => void }) => (
+type HeaderProps = { authenticated?: boolean; displayName?: string; onLogout?: () => void };
+
+const Header = ({ go, simple = false, authenticated = false, displayName, onLogout }: { go: (p: Page) => void; simple?: boolean } & HeaderProps) => (
   <header className="header">
     <button className="brand" onClick={() => go("home")}><span>TAROKH</span><small>CHARISMA LAB</small></button>
     {!simple && <nav><button onClick={() => go("home")}>خانه</button><button onClick={() => go("dashboard")}>آکادمی</button><button onClick={() => go("pricing")}>پلن‌ها</button><button onClick={() => go("about")}>درباره ما</button><button onClick={() => window.dispatchEvent(new Event("open-support"))}>پشتیبانی</button></nav>}
@@ -66,8 +68,8 @@ function SupportWidget({ showButton }: { showButton: boolean }) {
   </div>;
 }
 
-function Home({ go }: { go: (p: Page) => void }) {
-  return <><Header go={go}/><main>
+function Home({ go, ...auth }: { go: (p: Page) => void } & HeaderProps) {
+  return <><Header go={go} {...auth}/><main>
     <section className="hero">
       <div className="hero-copy">
         <span className="eyebrow">آزمایشگاه کاریزمای مردانه</span>
@@ -90,8 +92,8 @@ function Home({ go }: { go: (p: Page) => void }) {
   </main><Footer go={go}/><button className="sticky-cta" onClick={() => go("auth")}>شروع رایگان</button></>;
 }
 
-function About({ go }: { go: (p: Page) => void }) {
-  return <><Header go={go}/><main className="about-page">
+function About({ go, ...auth }: { go: (p: Page) => void } & HeaderProps) {
+  return <><Header go={go} {...auth}/><main className="about-page">
     <section className="about-hero"><span className="eyebrow">درباره Charisma Lab</span><h1>کاریزما ساختنی است.</h1><p>ما کمک می‌کنیم حضور مؤثر را با تمرین‌های کوچک، واقعی و پیوسته بسازی.</p></section>
     <section className="brand-story"><span>داستان ما</span><h2>از دانستن تا توانستن</h2><p>Charisma Lab با یک باور ساده شکل گرفت: ارتباط مؤثر یک استعداد ذاتی نیست. بیشتر آموزش‌ها فقط درباره اعتمادبه‌نفس حرف می‌زنند؛ ما آن را به رفتارهای کوچک و قابل تمرین تبدیل کرده‌ایم. اینجا هر درس با یک اقدام واقعی تمام می‌شود تا تغییر، بیرون از صفحه و در زندگی روزمره اتفاق بیفتد.</p></section>
     <section className="values"><div className="about-heading"><span>چیزی که به آن پایبندیم</span><h2>ارزش‌های ما</h2></div><div className="value-grid">{[["۰۱","عمل مهم‌تر از تئوری","هر مفهوم باید به یک تمرین روشن و قابل اجرا تبدیل شود."],["۰۲","جدی و محترمانه","بدون شعار و قضاوت، با احترام به مسیر منحصربه‌فرد هر فرد."],["۰۳","مسیر مرحله‌ای","تغییر پایدار از قدم‌های کوچک، منظم و قابل اندازه‌گیری ساخته می‌شود."]].map(([n,t,d])=><article key={n}><span>{n}</span><h3>{t}</h3><p>{d}</p></article>)}</div></section>
@@ -216,8 +218,8 @@ function Dashboard({ go, onLogout, displayName }: { go: (p: Page) => void; onLog
   </main><BottomNav page="dashboard" go={go}/></>;
 }
 
-function Lesson({ go }: { go: (p: Page) => void }) {
-  return <><Header go={go}/><main className="app-page lesson-page">
+function Lesson({ go, ...auth }: { go: (p: Page) => void } & HeaderProps) {
+  return <><Header go={go} {...auth}/><main className="app-page lesson-page">
     <button className="back" onClick={() => go("dashboard")}><Icon name="arrow"/> بازگشت به مسیر</button>
     <div className="video"><div className="play"><Icon name="play"/></div><div><span>درس پنجم</span><b>۰۸:۴۲</b></div></div>
     <div className="lesson-content"><article><span className="eyebrow">فصل اول · اعتماد‌به‌نفس</span><h2>صدایی که شنیده می‌شود</h2><p>صدای مطمئن، بلندترین صدا نیست. صدایی‌ست که ریتم دارد، مکث را می‌شناسد و برای شنیده‌شدن عجله نمی‌کند.</p><div className="quote">«مکث، نشانه تردید نیست؛ نشانه کنترل است.»</div></article>
@@ -226,7 +228,7 @@ function Lesson({ go }: { go: (p: Page) => void }) {
   </main><BottomNav page="lesson" go={go}/></>;
 }
 
-function Coach({ go }: { go: (p: Page) => void }) {
+function Coach({ go, ...auth }: { go: (p: Page) => void } & HeaderProps) {
   const scenarioData = {
     "آشنایی در جمع": {
       context:"در یک دورهمی، فرد جدیدی کنار تو ایستاده است.",
@@ -263,7 +265,7 @@ function Coach({ go }: { go: (p: Page) => void }) {
     setDraft("");
   };
   const current=scenarioData[scenario];
-  return <><Header go={go}/><main className="coach-page">
+  return <><Header go={go} {...auth}/><main className="coach-page">
     <aside className="scenarios"><span className="eyebrow">مربی هوش مصنوعی</span><h2>تمرین مکالمه</h2><p>یک موقعیت را انتخاب کن و بدون قضاوت تمرین کن.</p>{(Object.keys(scenarioData) as Array<keyof typeof scenarioData>).map(s=><button className={scenario===s?"active":""} onClick={()=>changeScenario(s)} key={s}><span>{s}</span><Icon name="arrow"/></button>)}</aside>
     <section className="chat"><div className="chat-head"><div className="ai-dot">AI</div><div><b>{scenario}</b><span>مربی آماده تمرین است</span></div><i/></div>
       <div className="messages"><div className="context">سناریو: {current.context}</div><div className="message ai"><span>مربی</span><p>{current.prompt}</p></div>{submitted&&<><div className="message me"><p>{submitted}</p></div><div className="message ai"><span>طرف مقابل</span><p>{current.reply}</p></div></>}</div>
@@ -278,14 +280,14 @@ const plans = [
   {name:"طلا",price:"۳",desc:"انتخاب جدی برای تغییر",popular:true,items:["تمام امکانات نقره","هوش مصنوعی گسترده","منتورینگ ماهانه نیمه‌خصوصی","بازخورد ویدیوی تمرین"]},
   {name:"الماس",price:"۸",desc:"مسیر کاملاً اختصاصی",items:["تمام امکانات طلا","هوش مصنوعی نامحدود","منتورینگ ماهانه خصوصی"]},
 ];
-function Pricing({ go, choose }: { go: (p: Page) => void; choose: (p: string) => void }) {
-  return <><Header go={go}/><main className="pricing-page"><div className="section-title"><span>سرمایه‌گذاری روی خودت</span><h2>پلن مناسب مسیرت را انتخاب کن</h2><p>همه پلن‌ها دسترسی دائمی به محتوای آموزشی دارند.</p></div><div className="plans">{plans.map(p=><div className={`plan ${p.popular?"gold":""}`} key={p.name}>{p.popular&&<span className="popular">محبوب‌ترین</span>}<span>{p.name}</span><h3>{p.price}<small> میلیون تومان</small></h3><p>{p.desc}</p><Button block ghost={!p.popular} onClick={()=>{choose(p.name);go("checkout")}}>انتخاب {p.name}</Button><ul>{p.items.map(x=><li key={x}><Icon name="check"/>{x}</li>)}</ul></div>)}</div></main></>;
+function Pricing({ go, choose, ...auth }: { go: (p: Page) => void; choose: (p: string) => void } & HeaderProps) {
+  return <><Header go={go} {...auth}/><main className="pricing-page"><div className="section-title"><span>سرمایه‌گذاری روی خودت</span><h2>پلن مناسب مسیرت را انتخاب کن</h2><p>همه پلن‌ها دسترسی دائمی به محتوای آموزشی دارند.</p></div><div className="plans">{plans.map(p=><div className={`plan ${p.popular?"gold":""}`} key={p.name}>{p.popular&&<span className="popular">محبوب‌ترین</span>}<span>{p.name}</span><h3>{p.price}<small> میلیون تومان</small></h3><p>{p.desc}</p><Button block ghost={!p.popular} onClick={()=>{choose(p.name);go("checkout")}}>انتخاب {p.name}</Button><ul>{p.items.map(x=><li key={x}><Icon name="check"/>{x}</li>)}</ul></div>)}</div></main></>;
 }
 
-function Checkout({ go, plan }: { go:(p:Page)=>void; plan:string }) {
+function Checkout({ go, plan, ...auth }: { go:(p:Page)=>void; plan:string } & HeaderProps) {
   const data=plans.find(p=>p.name===plan) || plans[2];
   const [paid,setPaid]=useState(false);
-  return <><Header go={go} simple/><main className="center-page">{paid?<div className="success"><div><Icon name="check"/></div><span className="eyebrow">پرداخت موفق</span><h2>به آزمایشگاه کاریزما خوش آمدی.</h2><p>پلن {data.name} برای تو فعال شد. اولین قدم مسیرت آماده است.</p><Button onClick={()=>go("dashboard")}>ورود به داشبورد <Icon name="arrow"/></Button></div>:<div className="checkout"><div><button className="back" onClick={()=>go("pricing")}><Icon name="arrow"/> بازگشت</button><span className="eyebrow">تکمیل ثبت‌نام</span><h2>اطلاعات پرداخت</h2><label>نام و نام خانوادگی<input placeholder="نام کامل"/></label><label>شماره موبایل<input dir="ltr" placeholder="09 — — — — — — — — —"/></label><div className="secure"><Icon name="lock"/> پرداخت امن از طریق درگاه بانکی</div></div><aside><span>خلاصه سفارش</span><h3>پلن {data.name}</h3><ul>{data.items.map(x=><li key={x}><Icon name="check"/>{x}</li>)}</ul><div className="total"><span>مبلغ نهایی</span><b>{data.price} میلیون تومان</b></div><Button block onClick={()=>setPaid(true)}>پرداخت و شروع مسیر</Button></aside></div>}</main></>;
+  return <><Header go={go} simple {...auth}/><main className="center-page">{paid?<div className="success"><div><Icon name="check"/></div><span className="eyebrow">پرداخت موفق</span><h2>به آزمایشگاه کاریزما خوش آمدی.</h2><p>پلن {data.name} برای تو فعال شد. اولین قدم مسیرت آماده است.</p><Button onClick={()=>go("dashboard")}>ورود به داشبورد <Icon name="arrow"/></Button></div>:<div className="checkout"><div><button className="back" onClick={()=>go("pricing")}><Icon name="arrow"/> بازگشت</button><span className="eyebrow">تکمیل ثبت‌نام</span><h2>اطلاعات پرداخت</h2><label>نام و نام خانوادگی<input placeholder="نام کامل"/></label><label>شماره موبایل<input dir="ltr" placeholder="09 — — — — — — — — —"/></label><div className="secure"><Icon name="lock"/> پرداخت امن از طریق درگاه بانکی</div></div><aside><span>خلاصه سفارش</span><h3>پلن {data.name}</h3><ul>{data.items.map(x=><li key={x}><Icon name="check"/>{x}</li>)}</ul><div className="total"><span>مبلغ نهایی</span><b>{data.price} میلیون تومان</b></div><Button block onClick={()=>setPaid(true)}>پرداخت و شروع مسیر</Button></aside></div>}</main></>;
 }
 
 export default function App() {
@@ -303,6 +305,17 @@ export default function App() {
       if(!restored && page!=="home" && page!=="about" && page!=="pricing") setPage("home");
     });
     return ()=>{active=false};
+  },[]);
+  useEffect(()=>{
+    const syncSession=(event:StorageEvent)=>{
+      if(event.key!=="tarokh-auth-session") return;
+      const nextSession=getStoredSession();
+      setSession(nextSession);
+      if(nextSession) getUserProfile(nextSession).then(setProfile).catch(()=>setProfile(null));
+      else { setProfile(null); setPage("home"); }
+    };
+    window.addEventListener("storage",syncSession);
+    return ()=>window.removeEventListener("storage",syncSession);
   },[]);
   const go=(nextPage:Page)=>{
     if(protectedPages.includes(nextPage) && !session){
@@ -324,5 +337,6 @@ export default function App() {
   };
   const displayName=profile?.username || profile?.display_name || session?.user.user_metadata?.username || session?.user.user_metadata?.display_name;
   const visiblePage=!session && protectedPages.includes(page)?"auth":page;
-  return <div dir="rtl">{visiblePage==="home"?<Home go={go}/>:visiblePage==="about"?<About go={go}/>:visiblePage==="auth"?<Auth go={go} onAuthenticated={authenticated}/>:visiblePage==="dashboard"?<Dashboard go={go} displayName={displayName} onLogout={logout}/>:visiblePage==="lesson"?<Lesson go={go}/>:visiblePage==="coach"?<Coach go={go}/>:visiblePage==="pricing"?<Pricing go={go} choose={setPlan}/>:<Checkout go={go} plan={plan}/>}<SupportWidget showButton={visiblePage==="home"||visiblePage==="dashboard"}/></div>;
+  const headerAuth={authenticated:Boolean(session),displayName,onLogout:logout};
+  return <div dir="rtl">{visiblePage==="home"?<Home go={go} {...headerAuth}/>:visiblePage==="about"?<About go={go} {...headerAuth}/>:visiblePage==="auth"?<Auth go={go} onAuthenticated={authenticated}/>:visiblePage==="dashboard"?<Dashboard go={go} displayName={displayName} onLogout={logout}/>:visiblePage==="lesson"?<Lesson go={go} {...headerAuth}/>:visiblePage==="coach"?<Coach go={go} {...headerAuth}/>:visiblePage==="pricing"?<Pricing go={go} choose={setPlan} {...headerAuth}/>:<Checkout go={go} plan={plan} {...headerAuth}/>}<SupportWidget showButton={visiblePage==="home"||visiblePage==="dashboard"}/></div>;
 }

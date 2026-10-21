@@ -91,6 +91,10 @@ export async function getUserProfile(session: AuthSession) {
   return profiles[0] || null;
 }
 
+function clearSession() {
+  localStorage.removeItem("tarokh-auth-session");
+}
+
 export function getStoredSession(): AuthSession | null {
   const raw = localStorage.getItem("tarokh-auth-session");
   if (!raw) return null;
