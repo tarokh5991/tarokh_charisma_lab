@@ -95,7 +95,25 @@ function clearSession() {
   localStorage.removeItem("tarokh-auth-session");
 }
 
-export function getStoredSession(): AuthSession | null {
+export async function updateUserProfile(session: AuthSession, username: string) {
+  const { anonKey } = requireConfig();
+  const response = await fetch(endpoint(`/rest/v1/profiles?id=eq.${encodeURIComponent(session.user.id)}`), {
+    method: "PATCH",
+    headers: {
+      apikey: anonKey,
+      Authorization: `Bearer ${session.access_token}`,
+      "Content-Type": "application/json",
+      Prefer: "return=representation",
+    },
+    body: JSON.stringify({ username: username.trim(), display_name: username.trim() }),
+  });
+  if (!response.ok) {
+    const payload = await response.json().catch(() => null) as { message?: string; details?: string } | null;
+    throw new Error(payload?.message || payload?.details || "ذخیرهٔ نام کاربری انجام نشد.");
+  }
+  return (await response.json().catch(() => [])) as UserProfile[];
+}
+
   const raw = localStorage.getItem("tarokh-auth-session");
   if (!raw) return null;
   try {

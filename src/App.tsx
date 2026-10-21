@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { getStoredSession, getUserProfile, requestOtp, restoreSession, saveSession, signOut, verifyOtp, type AuthSession, type UserProfile } from "./lib/supabase-auth";
+import { getStoredSession, getUserProfile, requestOtp, restoreSession, saveSession, signOut, updateUserProfile, verifyOtp, type AuthSession, type UserProfile } from "./lib/supabase-auth";
 
 type Page = "home" | "about" | "auth" | "dashboard" | "lesson" | "coach" | "pricing" | "checkout" | "profile";
 
@@ -165,8 +165,11 @@ function Auth({ go, onAuthenticated }: { go: (p: Page) => void; onAuthenticated:
       const session=await verifyOtp(identifier.trim(), otp.trim(), accountTab);
       const savedUsername=session.user.user_metadata?.username || session.user.user_metadata?.display_name;
       if(savedUsername && savedUsername.trim().toLowerCase()!==username.trim().toLowerCase()) throw new Error("نام کاربری با این حساب مطابقت ندارد.");
-      saveSession(session);
-      onAuthenticated(session);
+      const updatedProfiles=await updateUserProfile(session, username);
+      if(!updatedProfiles[0]) throw new Error("پروفایل کاربر پیدا نشد.");
+      const nextSession={...session,user:{...session.user,user_metadata:{...session.user.user_metadata,username:username.trim(),display_name:username.trim()}}};
+      saveSession(nextSession);
+      onAuthenticated(nextSession);
       go("dashboard");
     } catch (error) {
       setMessage(error instanceof Error ? error.message : "کد واردشده معتبر نیست.");
