@@ -114,6 +114,7 @@ export async function updateUserProfile(session: AuthSession, username: string) 
   return (await response.json().catch(() => [])) as UserProfile[];
 }
 
+export function getStoredSession(): AuthSession | null {
   const raw = localStorage.getItem("tarokh-auth-session");
   if (!raw) return null;
   try {
