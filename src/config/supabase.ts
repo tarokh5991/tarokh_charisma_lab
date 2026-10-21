@@ -1,8 +1,8 @@
 const configuredUrl = import.meta.env.VITE_SUPABASE_URL?.trim();
-const supabaseUrl = configuredUrl
-  ? configuredUrl.startsWith("http")
-    ? configuredUrl.replace(/\/$/, "")
-    : `https://${configuredUrl}.supabase.co`
+const dashboardProject = configuredUrl?.match(/supabase\.com\/dashboard\/project\/([^/?#]+)/)?.[1];
+const projectRef = dashboardProject || configuredUrl?.replace(/^https?:\/\//, "").split(".")[0];
+const supabaseUrl = projectRef
+  ? `https://${projectRef}.supabase.co`
   : undefined;
 const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY?.trim();
 
