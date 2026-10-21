@@ -11,7 +11,29 @@ VITE_SUPABASE_ANON_KEY=<anon-key>
 
 `.env.example` فقط نام متغیرهای موردنیاز را نگه می‌دارد.
 
-## اعمال اسکیمای اولیه
+## تنظیم در محیط توسعه
+
+در ریشهٔ پروژه یک فایل `.env.local` بسازید و این دو مقدار را در آن قرار دهید:
+
+```bash
+VITE_SUPABASE_URL=https://<project-ref>.supabase.co
+VITE_SUPABASE_ANON_KEY=<anon-key>
+```
+
+فایل `.env.local` نباید commit شود. بعد از تغییر آن، dev server را دوباره اجرا کنید.
+
+## تنظیم در GitHub Actions
+
+1. در داشبورد Supabase از مسیر **Project Settings → API**، مقدار **Project URL** و کلید **Publishable key** را بردارید. اگر پروژهٔ شما رابط قدیمی دارد، مقدار **anon / public key** همان مقداری است که باید استفاده شود.
+2. در GitHub ریپو را باز کنید و به **Settings → Secrets and variables → Actions** بروید.
+3. در تب **Secrets** روی **New repository secret** بزنید و این دو secret را جداگانه بسازید:
+   - نام: `VITE_SUPABASE_URL`، مقدار: Project URL
+   - نام: `VITE_SUPABASE_ANON_KEY`، مقدار: Publishable key یا anon/public key
+4. لازم نیست secret را داخل کد یا فایل `.env.example` بنویسید. workflow انتشار، این secretها را هنگام build به متغیرهای Vite تبدیل می‌کند.
+5. از مسیر **Actions → Deploy to GitHub Pages**، اجرای workflow را با **Run workflow** دوباره شروع کنید.
+
+کلید publishable/anon برای استفادهٔ مرورگر طراحی شده است؛ هرگز **service_role key** را در این متغیر یا در کد فرانت‌اند قرار ندهید.
+
 
 پس از ساخت پروژهٔ Supabase، migration زیر را از طریق ابزار CLI یا SQL Editor همان پروژه اعمال کنید:
 
