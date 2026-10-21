@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { getStoredSession, requestOtp, saveSession, verifyOtp } from "./lib/supabase-auth";
 
 type Page = "home" | "about" | "auth" | "dashboard" | "lesson" | "coach" | "pricing" | "checkout";
 
@@ -100,10 +101,14 @@ function About({ go }: { go: (p: Page) => void }) {
 }
 
 function Auth({ go }: { go: (p: Page) => void }) {
-  const [view,setView]=useState<"login"|"quiz"|"result"|"create">("login");
+  const [view,setView]=useState<"login"|"quiz"|"result"|"create"|"verify">("login");
   const [step,setStep]=useState(1);
   const [answers,setAnswers]=useState<string[][]>([[],[],[]]);
   const [accountTab,setAccountTab]=useState<"mobile"|"email">("mobile");
+  const [identifier,setIdentifier]=useState("");
+  const [otp,setOtp]=useState("");
+  const [message,setMessage]=useState("");
+  const [busy,setBusy]=useState(false);
   const questions = [
     {title:"بیشتر در چه موقعیتی اذیت می‌شوی؟",hint:"حداکثر ۲ مورد را انتخاب کن",max:2,options:["شروع مکالمه با آدم جدید","ادامه‌ی مکالمه و پیدا کردن موضوع","حرف زدن در جمع یا جلسه","ارتباط با جنس مخالف","گفتن «نه» و مرزگذاری"]},
     {title:"چه چیزی را بیشتر در خودت می‌بینی؟",hint:"حداکثر ۲ مورد را انتخاب کن",max:2,options:["حرفی برای گفتن پیدا نمی‌کنم","زیاد توضیح می‌دهم و تأیید می‌خواهم","زبان بدنم مضطرب به‌نظر می‌رسد","طرف مقابل را خوب نمی‌خوانم","مکالمه‌ها زود تمام می‌شوند"]},
@@ -132,17 +137,40 @@ function Auth({ go }: { go: (p: Page) => void }) {
     A:["آگاهی اجتماعی","نشانه‌های رفتاری طرف مقابل را بهتر می‌خوانی."],
     R:["ایجاد ارتباط","شروع و ادامه‌دادن ارتباط برایت طبیعی‌تر می‌شود."],
   };
+  const submitOtp=async()=>{
+    if(!identifier.trim()) return;
+    setBusy(true); setMessage("");
+    try {
+      await requestOtp(identifier.trim(), accountTab);
+      setView("verify");
+    } catch (error) {
+      setMessage(error instanceof Error ? error.message : "ارسال کد انجام نشد.");
+    } finally { setBusy(false); }
+  };
+  const confirmOtp=async()=>{
+    if(!otp.trim()) return;
+    setBusy(true); setMessage("");
+    try {
+      const session=await verifyOtp(identifier.trim(), otp.trim(), accountTab);
+      saveSession(session);
+      go("dashboard");
+    } catch (error) {
+      setMessage(error instanceof Error ? error.message : "کد واردشده معتبر نیست.");
+    } finally { setBusy(false); }
+  };
   const AccountForm=({login=false}:{login?:boolean})=><>
     {login&&<button className="auth-switch" onClick={()=>{setView("quiz");setStep(1)}}>حساب نداری؟ <b>ثبت‌نام</b></button>}
-    <span className="eyebrow">{login?"بازگشت به آزمایشگاه":"آخرین قدم"}</span>
+    <span className="eyebrow">{login?"ورود امن با کد یک‌بارمصرف":"آخرین قدم"}</span>
     <h2>{login?"ورود به حساب":"ساخت حساب"}</h2>
     <div className="auth-tabs"><button className={accountTab==="mobile"?"active":""} onClick={()=>setAccountTab("mobile")}>شماره موبایل</button><button className={accountTab==="email"?"active":""} onClick={()=>setAccountTab("email")}>ایمیل</button></div>
-    {accountTab==="mobile"?<label>شماره موبایل<input dir="ltr" inputMode="tel" placeholder="0912 000 0000"/></label>:<label>ایمیل<input dir="ltr" type="email" placeholder="name@example.com"/></label>}
-    <Button block onClick={()=>go("dashboard")}>{login?"ورود":"دریافت کد"} <Icon name="arrow"/></Button>
+    {accountTab==="mobile"?<label>شماره موبایل<input value={identifier} onChange={event=>setIdentifier(event.target.value)} dir="ltr" inputMode="tel" placeholder="0912 000 0000"/> </label>:<label>ایمیل<input value={identifier} onChange={event=>setIdentifier(event.target.value)} dir="ltr" type="email" placeholder="name@example.com"/></label>}
+    <Button block onClick={submitOtp} disabled={busy||!identifier.trim()}>{busy?"در حال ارسال…":login?"دریافت کد ورود":"دریافت کد"} <Icon name="arrow"/></Button>
+    {message&&<p className="auth-message">{message}</p>}
     {!login&&<small>پاسخ‌های تو فقط برای شخصی‌سازی مسیرت استفاده می‌شود.</small>}
   </>;
   return <><Header go={go} simple/><main className="center-page auth-page">
     {view==="login"&&<div className="auth-card"><AccountForm login/></div>}
+    {view==="verify"&&<div className="auth-card"><button className="auth-switch" onClick={()=>setView("login")}>ویرایش اطلاعات</button><span className="eyebrow">کد تأیید ارسال شد</span><h2>کدت را وارد کن</h2><p>کد یک‌بارمصرف برای {identifier} ارسال شد.</p><label>کد تأیید<input value={otp} onChange={event=>setOtp(event.target.value)} dir="ltr" inputMode="numeric" maxLength={6} placeholder="------"/></label><Button block onClick={confirmOtp} disabled={busy||otp.trim().length<4}>{busy?"در حال بررسی…":"تأیید و ورود"} <Icon name="arrow"/></Button>{message&&<p className="auth-message">{message}</p>}<button className="text-link resend" onClick={submitOtp} disabled={busy}>ارسال دوباره کد</button></div>}
     {view==="quiz"&&<div className="auth-card quiz-card">
       <div className="quiz-progress"><div><i style={{width:`${step/3*100}%`}}/></div><span>مرحله {step} از ۳</span></div>
       <span className="eyebrow">شناخت مسیر تو</span><h2>{questions[step-1].title}</h2><p>{questions[step-1].hint}</p>
