@@ -9,6 +9,13 @@ export type AuthSession = {
   user: { id: string; email?: string; phone?: string; user_metadata?: { username?: string; display_name?: string } };
 };
 
+export type UserProfile = {
+  id: string;
+  role: "learner" | "mentor" | "admin";
+  username?: string | null;
+  display_name?: string | null;
+};
+
 function requireConfig() {
   if (!supabaseConfig.isConfigured || !supabaseConfig.url || !supabaseConfig.anonKey) {
     throw new Error("اتصال به سرویس احراز هویت هنوز تنظیم نشده است.");
@@ -62,6 +69,19 @@ export function verifyOtp(value: string, token: string, mode: AuthMode) {
   return request("/auth/v1/verify", mode === "mobile"
     ? { phone: identifier, token, type: "sms" }
     : { email: identifier, token, type: "email" });
+}
+
+export async function getUserProfile(session: AuthSession) {
+  const { anonKey } = requireConfig();
+  const response = await fetch(endpoint(`/rest/v1/profiles?id=eq.${encodeURIComponent(session.user.id)}&select=id,role,username,display_name`), {
+    headers: {
+      apikey: anonKey,
+      Authorization: `Bearer ${session.access_token}`,
+    },
+  });
+  if (!response.ok) throw new Error("اطلاعات حساب دریافت نشد.");
+  const profiles = await response.json() as UserProfile[];
+  return profiles[0] || null;
 }
 
 export function getStoredSession(): AuthSession | null {

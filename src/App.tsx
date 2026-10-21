@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { getStoredSession, requestOtp, restoreSession, saveSession, signOut, verifyOtp, type AuthSession } from "./lib/supabase-auth";
+import { getStoredSession, getUserProfile, requestOtp, restoreSession, saveSession, signOut, verifyOtp, type AuthSession, type UserProfile } from "./lib/supabase-auth";
 
 type Page = "home" | "about" | "auth" | "dashboard" | "lesson" | "coach" | "pricing" | "checkout";
 
@@ -183,7 +183,7 @@ function Auth({ go, onAuthenticated }: { go: (p: Page) => void; onAuthenticated:
   </>;
   return <><Header go={go} simple/><main className="center-page auth-page">
     {view==="login"&&<div className="auth-card">{AccountForm({login:true})}</div>}
-    {view==="verify"&&<div className="auth-card"><button className="auth-switch" onClick={()=>setView("login")}>ویرایش اطلاعات</button><span className="eyebrow">کد تأیید ارسال شد</span><h2>کدت را وارد کن</h2><p>کد یک‌بارمصرف برای {identifier} ارسال شد.</p><label>کد تأیید<input value={otp} onChange={event=>setOtp(event.target.value)} dir="ltr" inputMode="numeric" maxLength={6} placeholder="------"/></label><Button block onClick={confirmOtp} disabled={busy||otp.trim().length<4}>{busy?"در حال بررسی…":"تأیید و ورود"} <Icon name="arrow"/></Button>{message&&<p className="auth-message">{message}</p>}<button className="text-link resend" onClick={()=>submitOtp()} disabled={busy||cooldown>0}>{cooldown>0?`ارسال دوباره تا ${cooldown} ثانیه`:"ارسال دوباره کد"}</button></div>}
+    {view==="verify"&&<div className="auth-card"><button className="auth-switch" onClick={()=>setView("login")}>ویرایش اطلاعات</button><span className="eyebrow">کد تأیید ارسال شد</span><h2>کدت را وارد کن</h2><p>کد یک‌بارمصرف برای {identifier} ارسال شد.</p><label>کد تأیید<input value={otp} onChange={event=>setOtp(event.target.value)} dir="ltr" inputMode="numeric" maxLength={8} placeholder="--------"/></label><Button block onClick={confirmOtp} disabled={busy||otp.trim().length<8}>{busy?"در حال بررسی…":"تأیید و ورود"} <Icon name="arrow"/></Button>{message&&<p className="auth-message">{message}</p>}<button className="text-link resend" onClick={()=>submitOtp()} disabled={busy||cooldown>0}>{cooldown>0?`ارسال دوباره تا ${cooldown} ثانیه`:"ارسال دوباره کد"}</button></div>}
     {view==="quiz"&&<div className="auth-card quiz-card">
       <div className="quiz-progress"><div><i style={{width:`${step/3*100}%`}}/></div><span>مرحله {step} از ۳</span></div>
       <span className="eyebrow">شناخت مسیر تو</span><h2>{questions[step-1].title}</h2><p>{questions[step-1].hint}</p>
@@ -290,23 +290,39 @@ function Checkout({ go, plan }: { go:(p:Page)=>void; plan:string }) {
 
 export default function App() {
   const [session,setSession]=useState<AuthSession|null>(()=>getStoredSession());
+  const [profile,setProfile]=useState<UserProfile|null>(null);
   const [page,setPage]=useState<Page>(()=>getStoredSession()?"dashboard":"home");
   const [plan,setPlan]=useState("طلا");
+  const protectedPages:Page[]=["dashboard","lesson","coach","checkout"];
   useEffect(()=>{
     let active=true;
-    restoreSession().then(restored=>{
+    restoreSession().then(async restored=>{
       if(!active) return;
       setSession(restored);
+      if(restored) setProfile(await getUserProfile(restored).catch(()=>null));
       if(!restored && page!=="home" && page!=="about" && page!=="pricing") setPage("home");
     });
     return ()=>{active=false};
   },[]);
-  const go=(p:Page)=>{setPage(p);window.scrollTo({top:0,behavior:"smooth"})};
+  const go=(nextPage:Page)=>{
+    if(protectedPages.includes(nextPage) && !session){
+      setPage("auth");
+      return;
+    }
+    setPage(nextPage);
+    window.scrollTo({top:0,behavior:"smooth"});
+  };
+  const authenticated=(nextSession:AuthSession)=>{
+    setSession(nextSession);
+    getUserProfile(nextSession).then(setProfile).catch(()=>setProfile(null));
+  };
   const logout=async()=>{
     await signOut(session);
     setSession(null);
+    setProfile(null);
     go("home");
   };
-  const displayName=session?.user.user_metadata?.username || session?.user.user_metadata?.display_name;
-  return <div dir="rtl">{page==="home"?<Home go={go}/>:page==="about"?<About go={go}/>:page==="auth"?<Auth go={go} onAuthenticated={setSession}/>:page==="dashboard"?<Dashboard go={go} displayName={displayName} onLogout={logout}/>:page==="lesson"?<Lesson go={go}/>:page==="coach"?<Coach go={go}/>:page==="pricing"?<Pricing go={go} choose={setPlan}/>:<Checkout go={go} plan={plan}/>}<SupportWidget showButton={page==="home"||page==="dashboard"}/></div>;
+  const displayName=profile?.username || profile?.display_name || session?.user.user_metadata?.username || session?.user.user_metadata?.display_name;
+  const visiblePage=!session && protectedPages.includes(page)?"auth":page;
+  return <div dir="rtl">{visiblePage==="home"?<Home go={go}/>:visiblePage==="about"?<About go={go}/>:visiblePage==="auth"?<Auth go={go} onAuthenticated={authenticated}/>:visiblePage==="dashboard"?<Dashboard go={go} displayName={displayName} onLogout={logout}/>:visiblePage==="lesson"?<Lesson go={go}/>:visiblePage==="coach"?<Coach go={go}/>:visiblePage==="pricing"?<Pricing go={go} choose={setPlan}/>:<Checkout go={go} plan={plan}/>}<SupportWidget showButton={visiblePage==="home"||visiblePage==="dashboard"}/></div>;
 }
