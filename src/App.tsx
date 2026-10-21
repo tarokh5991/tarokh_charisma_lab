@@ -169,7 +169,7 @@ function Auth({ go }: { go: (p: Page) => void }) {
     {!login&&<small>پاسخ‌های تو فقط برای شخصی‌سازی مسیرت استفاده می‌شود.</small>}
   </>;
   return <><Header go={go} simple/><main className="center-page auth-page">
-    {view==="login"&&<div className="auth-card"><AccountForm login/></div>}
+    {view==="login"&&<div className="auth-card">{AccountForm({login:true})}</div>}
     {view==="verify"&&<div className="auth-card"><button className="auth-switch" onClick={()=>setView("login")}>ویرایش اطلاعات</button><span className="eyebrow">کد تأیید ارسال شد</span><h2>کدت را وارد کن</h2><p>کد یک‌بارمصرف برای {identifier} ارسال شد.</p><label>کد تأیید<input value={otp} onChange={event=>setOtp(event.target.value)} dir="ltr" inputMode="numeric" maxLength={6} placeholder="------"/></label><Button block onClick={confirmOtp} disabled={busy||otp.trim().length<4}>{busy?"در حال بررسی…":"تأیید و ورود"} <Icon name="arrow"/></Button>{message&&<p className="auth-message">{message}</p>}<button className="text-link resend" onClick={submitOtp} disabled={busy}>ارسال دوباره کد</button></div>}
     {view==="quiz"&&<div className="auth-card quiz-card">
       <div className="quiz-progress"><div><i style={{width:`${step/3*100}%`}}/></div><span>مرحله {step} از ۳</span></div>
@@ -178,7 +178,7 @@ function Auth({ go }: { go: (p: Page) => void }) {
       <div className="quiz-actions"><Button ghost onClick={()=>step===1?setView("login"):setStep(step-1)}>قبلی</Button><Button disabled={!answers[step-1].length} onClick={()=>step===3?setView("result"):setStep(step+1)}>بعدی <Icon name="arrow"/></Button></div>
     </div>}
     {view==="result"&&<div className="auth-card result-card"><span className="eyebrow">بر اساس پاسخ‌های تو</span><h2>مسیر پیشنهادی تو</h2><p>تمرکز اصلی تو از این دو مهارت شروع می‌شود.</p><div className="recommended">{recommendation().map(letter=><div key={letter}><b dir="ltr">{letter}</b><span><strong>{paths[letter][0]}</strong><small>{paths[letter][1]}</small></span></div>)}</div><Button block onClick={()=>setView("create")}>ساخت حساب <Icon name="arrow"/></Button></div>}
-    {view==="create"&&<div className="auth-card"><button className="auth-switch" onClick={()=>setView("login")}>حساب داری؟ <b>ورود</b></button><AccountForm/></div>}
+    {view==="create"&&<div className="auth-card"><button className="auth-switch" onClick={()=>setView("login")}>حساب داری؟ <b>ورود</b></button>{AccountForm({})}</div>}
   </main></>;
 }
 
