@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { getStoredSession, getUserProfile, requestOtp, restoreSession, saveSession, signOut, verifyOtp, type AuthSession, type UserProfile } from "./lib/supabase-auth";
 
-type Page = "home" | "about" | "auth" | "dashboard" | "lesson" | "coach" | "pricing" | "checkout";
+type Page = "home" | "about" | "auth" | "dashboard" | "lesson" | "coach" | "pricing" | "checkout" | "profile";
 
 const Icon = ({ name }: { name: string }) => {
   const paths: Record<string, React.ReactNode> = {
@@ -29,13 +29,13 @@ const Header = ({ go, simple = false, authenticated = false, displayName, onLogo
   <header className="header">
     <button className="brand" onClick={() => go("home")}><span>TAROKH</span><small>CHARISMA LAB</small></button>
     {!simple && <nav><button onClick={() => go("home")}>خانه</button><button onClick={() => go("dashboard")}>آکادمی</button><button onClick={() => go("pricing")}>پلن‌ها</button><button onClick={() => go("about")}>درباره ما</button><button onClick={() => window.dispatchEvent(new Event("open-support"))}>پشتیبانی</button></nav>}
-    {authenticated ? <div className="account-actions"><span className="header-user">{displayName || "حساب من"}</span><Button onClick={onLogout} ghost>خروج</Button></div> : <Button onClick={() => go("auth")} ghost>ورود / ثبت‌نام</Button>}
+    {authenticated ? <div className="account-actions"><button className="header-user" onClick={() => go("profile")}>{displayName || "حساب من"}</button><Button onClick={onLogout} ghost>خروج</Button></div> : <Button onClick={() => go("auth")} ghost>ورود / ثبت‌نام</Button>}
   </header>
 );
 
 const BottomNav = ({ page, go }: { page: Page; go: (p: Page) => void }) => (
   <nav className="bottom-nav">
-    {[["dashboard","home","خانه"],["lesson","book","آموزش"],["coach","chat","مربی AI"],["pricing","user","حساب من"]].map(([p,i,l]) => (
+    {[["dashboard","home","خانه"],["lesson","book","آموزش"],["coach","chat","مربی AI"],["profile","user","حساب من"]].map(([p,i,l]) => (
       <button className={page === p ? "active" : ""} onClick={() => go(p as Page)} key={p}><Icon name={i}/><span>{l}</span></button>
     ))}
   </nav>
@@ -218,6 +218,17 @@ function Dashboard({ go, onLogout, displayName }: { go: (p: Page) => void; onLog
   </main><BottomNav page="dashboard" go={go}/></>;
 }
 
+function Profile({ go, session, profile, ...auth }: { go: (p: Page) => void; session: AuthSession; profile: UserProfile | null } & HeaderProps) {
+  const roleLabels={learner:"یادگیرنده",mentor:"منتور",admin:"مدیر"};
+  const contact=session.user.email || session.user.phone || "ثبت نشده";
+  const displayName=profile?.username || profile?.display_name || session.user.user_metadata?.username || "ثبت نشده";
+  return <><Header go={go} {...auth}/><main className="app-page profile-page">
+    <button className="back" onClick={()=>go("dashboard")}><Icon name="arrow"/> بازگشت به داشبورد</button>
+    <div className="profile-heading"><span className="eyebrow">حساب کاربری</span><h1>پروفایل من</h1><p>اطلاعات حساب و وضعیت عضویت تو</p></div>
+    <section className="profile-card"><div className="profile-avatar">{displayName.slice(0,1)}</div><div className="profile-details"><div><span>نام کاربری</span><strong>{displayName}</strong></div><div><span>ایمیل یا شماره موبایل</span><strong dir="ltr">{contact}</strong></div><div><span>نقش حساب</span><strong>{roleLabels[profile?.role || "learner"]}</strong></div><div><span>وضعیت نشست</span><strong className="profile-status">فعال</strong></div></div></section>
+  </main><BottomNav page="profile" go={go}/></>;
+}
+
 function Lesson({ go, ...auth }: { go: (p: Page) => void } & HeaderProps) {
   return <><Header go={go} {...auth}/><main className="app-page lesson-page">
     <button className="back" onClick={() => go("dashboard")}><Icon name="arrow"/> بازگشت به مسیر</button>
@@ -295,7 +306,7 @@ export default function App() {
   const [profile,setProfile]=useState<UserProfile|null>(null);
   const [page,setPage]=useState<Page>(()=>getStoredSession()?"dashboard":"home");
   const [plan,setPlan]=useState("طلا");
-  const protectedPages:Page[]=["dashboard","lesson","coach","checkout"];
+  const protectedPages:Page[]=["dashboard","lesson","coach","checkout","profile"];
   useEffect(()=>{
     let active=true;
     restoreSession().then(async restored=>{
@@ -338,5 +349,5 @@ export default function App() {
   const displayName=profile?.username || profile?.display_name || session?.user.user_metadata?.username || session?.user.user_metadata?.display_name;
   const visiblePage=!session && protectedPages.includes(page)?"auth":page;
   const headerAuth={authenticated:Boolean(session),displayName,onLogout:logout};
-  return <div dir="rtl">{visiblePage==="home"?<Home go={go} {...headerAuth}/>:visiblePage==="about"?<About go={go} {...headerAuth}/>:visiblePage==="auth"?<Auth go={go} onAuthenticated={authenticated}/>:visiblePage==="dashboard"?<Dashboard go={go} displayName={displayName} onLogout={logout}/>:visiblePage==="lesson"?<Lesson go={go} {...headerAuth}/>:visiblePage==="coach"?<Coach go={go} {...headerAuth}/>:visiblePage==="pricing"?<Pricing go={go} choose={setPlan} {...headerAuth}/>:<Checkout go={go} plan={plan} {...headerAuth}/>}<SupportWidget showButton={visiblePage==="home"||visiblePage==="dashboard"}/></div>;
+  return <div dir="rtl">{visiblePage==="home"?<Home go={go} {...headerAuth}/>:visiblePage==="about"?<About go={go} {...headerAuth}/>:visiblePage==="auth"?<Auth go={go} onAuthenticated={authenticated}/>:visiblePage==="dashboard"?<Dashboard go={go} displayName={displayName} onLogout={logout}/>:visiblePage==="profile"?<Profile go={go} session={session!} profile={profile} {...headerAuth}/>:visiblePage==="lesson"?<Lesson go={go} {...headerAuth}/>:visiblePage==="coach"?<Coach go={go} {...headerAuth}/>:visiblePage==="pricing"?<Pricing go={go} choose={setPlan} {...headerAuth}/>:<Checkout go={go} plan={plan} {...headerAuth}/>}<SupportWidget showButton={visiblePage==="home"||visiblePage==="dashboard"}/></div>;
 }
