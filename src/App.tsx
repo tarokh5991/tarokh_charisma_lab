@@ -110,6 +110,12 @@ function Auth({ go, onAuthenticated }: { go: (p: Page) => void; onAuthenticated:
   const [otp,setOtp]=useState("");
   const [message,setMessage]=useState("");
   const [busy,setBusy]=useState(false);
+  const [cooldown,setCooldown]=useState(0);
+  useEffect(()=>{
+    if(cooldown===0) return;
+    const timer=window.setInterval(()=>setCooldown(value=>Math.max(0,value-1)),1000);
+    return ()=>window.clearInterval(timer);
+  },[cooldown]);
   const questions = [
     {title:"بیشتر در چه موقعیتی اذیت می‌شوی؟",hint:"حداکثر ۲ مورد را انتخاب کن",max:2,options:["شروع مکالمه با آدم جدید","ادامه‌ی مکالمه و پیدا کردن موضوع","حرف زدن در جمع یا جلسه","ارتباط با جنس مخالف","گفتن «نه» و مرزگذاری"]},
     {title:"چه چیزی را بیشتر در خودت می‌بینی؟",hint:"حداکثر ۲ مورد را انتخاب کن",max:2,options:["حرفی برای گفتن پیدا نمی‌کنم","زیاد توضیح می‌دهم و تأیید می‌خواهم","زبان بدنم مضطرب به‌نظر می‌رسد","طرف مقابل را خوب نمی‌خوانم","مکالمه‌ها زود تمام می‌شوند"]},
@@ -139,13 +145,15 @@ function Auth({ go, onAuthenticated }: { go: (p: Page) => void; onAuthenticated:
     R:["ایجاد ارتباط","شروع و ادامه‌دادن ارتباط برایت طبیعی‌تر می‌شود."],
   };
   const submitOtp=async(isSignup=false)=>{
-    if(!identifier.trim() || !username.trim()) return;
+    if(!identifier.trim() || !username.trim() || cooldown>0) return;
     setBusy(true); setMessage("");
     try {
       await requestOtp(identifier.trim(), accountTab, isSignup ? username : undefined);
+      setCooldown(60);
       setView("verify");
     } catch (error) {
-      setMessage(error instanceof Error ? error.message : "ارسال کد انجام نشد.");
+      const details=error instanceof Error ? error.message : "ارسال کد انجام نشد.";
+      setMessage(details.toLowerCase().includes("rate limit") ? "درخواست‌های ایمیل بیش از حد مجاز شده است؛ لطفاً چند دقیقه صبر کن و دوباره تلاش کن." : details);
     } finally { setBusy(false); }
   };
   const confirmOtp=async()=>{
@@ -169,13 +177,13 @@ function Auth({ go, onAuthenticated }: { go: (p: Page) => void; onAuthenticated:
     <div className="auth-tabs"><button className={accountTab==="mobile"?"active":""} onClick={()=>setAccountTab("mobile")}>شماره موبایل</button><button className={accountTab==="email"?"active":""} onClick={()=>setAccountTab("email")}>ایمیل</button></div>
     <label>نام کاربری<input value={username} onChange={event=>setUsername(event.target.value)} dir="ltr" autoComplete="username" placeholder="مثلاً arman"/></label>
     {accountTab==="mobile"?<label>شماره موبایل<input value={identifier} onChange={event=>setIdentifier(event.target.value)} dir="ltr" inputMode="tel" autoComplete="tel" placeholder="0912 000 0000"/> </label>:<label>ایمیل<input value={identifier} onChange={event=>setIdentifier(event.target.value)} dir="ltr" type="email" autoComplete="email" placeholder="name@example.com"/></label>}
-    <Button block onClick={()=>submitOtp(!login)} disabled={busy||!identifier.trim()||!username.trim()}>{busy?"در حال ارسال…":login?"دریافت کد ورود":"دریافت کد"} <Icon name="arrow"/></Button>
+    <Button block onClick={()=>submitOtp(!login)} disabled={busy||cooldown>0||!identifier.trim()||!username.trim()}>{busy?"در حال ارسال…":cooldown>0?`ارسال دوباره تا ${cooldown} ثانیه`:login?"دریافت کد ورود":"دریافت کد"} <Icon name="arrow"/></Button>
     {message&&<p className="auth-message">{message}</p>}
     {!login&&<small>پاسخ‌های تو فقط برای شخصی‌سازی مسیرت استفاده می‌شود.</small>}
   </>;
   return <><Header go={go} simple/><main className="center-page auth-page">
     {view==="login"&&<div className="auth-card">{AccountForm({login:true})}</div>}
-    {view==="verify"&&<div className="auth-card"><button className="auth-switch" onClick={()=>setView("login")}>ویرایش اطلاعات</button><span className="eyebrow">کد تأیید ارسال شد</span><h2>کدت را وارد کن</h2><p>کد یک‌بارمصرف برای {identifier} ارسال شد.</p><label>کد تأیید<input value={otp} onChange={event=>setOtp(event.target.value)} dir="ltr" inputMode="numeric" maxLength={6} placeholder="------"/></label><Button block onClick={confirmOtp} disabled={busy||otp.trim().length<4}>{busy?"در حال بررسی…":"تأیید و ورود"} <Icon name="arrow"/></Button>{message&&<p className="auth-message">{message}</p>}<button className="text-link resend" onClick={submitOtp} disabled={busy}>ارسال دوباره کد</button></div>}
+    {view==="verify"&&<div className="auth-card"><button className="auth-switch" onClick={()=>setView("login")}>ویرایش اطلاعات</button><span className="eyebrow">کد تأیید ارسال شد</span><h2>کدت را وارد کن</h2><p>کد یک‌بارمصرف برای {identifier} ارسال شد.</p><label>کد تأیید<input value={otp} onChange={event=>setOtp(event.target.value)} dir="ltr" inputMode="numeric" maxLength={6} placeholder="------"/></label><Button block onClick={confirmOtp} disabled={busy||otp.trim().length<4}>{busy?"در حال بررسی…":"تأیید و ورود"} <Icon name="arrow"/></Button>{message&&<p className="auth-message">{message}</p>}<button className="text-link resend" onClick={()=>submitOtp()} disabled={busy||cooldown>0}>{cooldown>0?`ارسال دوباره تا ${cooldown} ثانیه`:"ارسال دوباره کد"}</button></div>}
     {view==="quiz"&&<div className="auth-card quiz-card">
       <div className="quiz-progress"><div><i style={{width:`${step/3*100}%`}}/></div><span>مرحله {step} از ۳</span></div>
       <span className="eyebrow">شناخت مسیر تو</span><h2>{questions[step-1].title}</h2><p>{questions[step-1].hint}</p>
