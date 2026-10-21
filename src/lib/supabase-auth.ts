@@ -47,8 +47,14 @@ async function request(path: string, body: Record<string, unknown>) {
   return response.json();
 }
 
+function normalizeDigits(value: string) {
+  return value
+    .replace(/[۰-۹]/g, digit => String("۰۱۲۳۴۵۶۷۸۹".indexOf(digit)))
+    .replace(/[٠-٩]/g, digit => String("٠١٢٣٤٥٦٧٨٩".indexOf(digit)));
+}
+
 function normalizeIdentifier(value: string, mode: AuthMode) {
-  const normalized = value.trim().replace(/[۰-۹]/g, digit => String("۰۱۲۳۴۵۶۷۸۹".indexOf(digit))).replace(/[٠-٩]/g, digit => String("٠١٢٣٤٥٦٧٨٩".indexOf(digit)));
+  const normalized = normalizeDigits(value.trim());
   if (mode === "email") return normalized.toLowerCase();
   const digits = normalized.replace(/[\s()-]/g, "");
   if (digits.startsWith("09")) return `+98${digits.slice(1)}`;
@@ -66,9 +72,10 @@ export function requestOtp(value: string, mode: AuthMode, username?: string) {
 
 export function verifyOtp(value: string, token: string, mode: AuthMode) {
   const identifier = normalizeIdentifier(value, mode);
+  const normalizedToken = normalizeDigits(token).replace(/\s/g, "");
   return request("/auth/v1/verify", mode === "mobile"
-    ? { phone: identifier, token, type: "sms" }
-    : { email: identifier, token, type: "email" });
+    ? { phone: identifier, token: normalizedToken, type: "sms" }
+    : { email: identifier, token: normalizedToken, type: "email" });
 }
 
 export async function getUserProfile(session: AuthSession) {
