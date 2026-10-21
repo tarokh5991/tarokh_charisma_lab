@@ -65,6 +65,37 @@ export function saveSession(session: AuthSession) {
   localStorage.setItem("tarokh-auth-session", JSON.stringify(session));
 }
 
-export function clearSession() {
-  localStorage.removeItem("tarokh-auth-session");
+export async function refreshSession(session: AuthSession) {
+  const response = await request("/auth/v1/token?grant_type=refresh_token", { refresh_token: session.refresh_token });
+  const nextSession = response as AuthSession;
+  saveSession(nextSession);
+  return nextSession;
+}
+
+export async function restoreSession() {
+  const session = getStoredSession();
+  if (!session) return null;
+  if (session.expires_at && session.expires_at * 1000 > Date.now() + 60_000) return session;
+  try {
+    return await refreshSession(session);
+  } catch {
+    clearSession();
+    return null;
+  }
+}
+
+export async function signOut(session: AuthSession | null) {
+  try {
+    if (session && supabaseConfig.isConfigured && supabaseConfig.anonKey) {
+      await fetch(endpoint("/auth/v1/logout"), {
+        method: "POST",
+        headers: {
+          apikey: supabaseConfig.anonKey,
+          Authorization: `Bearer ${session.access_token}`,
+        },
+      });
+    }
+  } finally {
+    clearSession();
+  }
 }

@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { getStoredSession, requestOtp, saveSession, verifyOtp } from "./lib/supabase-auth";
+import { getStoredSession, requestOtp, restoreSession, saveSession, signOut, verifyOtp, type AuthSession } from "./lib/supabase-auth";
 
 type Page = "home" | "about" | "auth" | "dashboard" | "lesson" | "coach" | "pricing" | "checkout";
 
@@ -23,11 +23,11 @@ const Button = ({ children, onClick, ghost = false, block = false, disabled = fa
   <button className={`btn ${ghost ? "btn-ghost" : ""} ${block ? "btn-block" : ""}`} onClick={onClick} disabled={disabled}>{children}</button>
 );
 
-const Header = ({ go, simple = false }: { go: (p: Page) => void; simple?: boolean }) => (
+const Header = ({ go, simple = false, authenticated = false, onLogout }: { go: (p: Page) => void; simple?: boolean; authenticated?: boolean; onLogout?: () => void }) => (
   <header className="header">
     <button className="brand" onClick={() => go("home")}><span>TAROKH</span><small>CHARISMA LAB</small></button>
     {!simple && <nav><button onClick={() => go("home")}>خانه</button><button onClick={() => go("dashboard")}>آکادمی</button><button onClick={() => go("pricing")}>پلن‌ها</button><button onClick={() => go("about")}>درباره ما</button><button onClick={() => window.dispatchEvent(new Event("open-support"))}>پشتیبانی</button></nav>}
-    <Button onClick={() => go("auth")} ghost>ورود / ثبت‌نام</Button>
+    {authenticated ? <Button onClick={onLogout} ghost>خروج</Button> : <Button onClick={() => go("auth")} ghost>ورود / ثبت‌نام</Button>}
   </header>
 );
 
@@ -100,7 +100,7 @@ function About({ go }: { go: (p: Page) => void }) {
   </main><Footer go={go}/></>;
 }
 
-function Auth({ go }: { go: (p: Page) => void }) {
+function Auth({ go, onAuthenticated }: { go: (p: Page) => void; onAuthenticated: (session: AuthSession) => void }) {
   const [view,setView]=useState<"login"|"quiz"|"result"|"create"|"verify">("login");
   const [step,setStep]=useState(1);
   const [answers,setAnswers]=useState<string[][]>([[],[],[]]);
@@ -153,6 +153,7 @@ function Auth({ go }: { go: (p: Page) => void }) {
     try {
       const session=await verifyOtp(identifier.trim(), otp.trim(), accountTab);
       saveSession(session);
+      onAuthenticated(session);
       go("dashboard");
     } catch (error) {
       setMessage(error instanceof Error ? error.message : "کد واردشده معتبر نیست.");
@@ -182,11 +183,11 @@ function Auth({ go }: { go: (p: Page) => void }) {
   </main></>;
 }
 
-function Dashboard({ go }: { go: (p: Page) => void }) {
+function Dashboard({ go, onLogout }: { go: (p: Page) => void; onLogout: () => void }) {
   const [showLeaders,setShowLeaders]=useState(false);
   const [showMe,setShowMe]=useState(true);
   const leaders=[["ش","شاهین آرام","۱۴"],["ک","کاوشگر شب","۱۲"],["م","مرد مسیر","۱۱"],["ذ","ذهن روشن","۱۰"],["س","سرو استوار","۹"],["ر","رهرو آرام","۹"],["ن","نقطه شروع","۸"],["پ","پلنگ صبور","۷"],["ق","قاب طلایی","۷"],["گ","گام بعدی","۶"]];
-  return <><Header go={go}/><main className="app-page">
+  return <><Header go={go} authenticated onLogout={onLogout}/><main className="app-page">
     <div className="welcome"><div><span className="eyebrow">سلام، آرمان</span><h2>امروز یک قدم جلوتر برو.</h2></div><div className="level"><span>سطح فعلی</span><b>کاوشگر</b></div></div>
     <div className="dashboard-grid">
       <section className="today-card"><span className="pill">تمرین امروز · ۱۰ دقیقه</span><h3>تماس چشمی قدرتمند</h3><p>در سه گفت‌وگوی امروز، تماس چشمی را یک ثانیه بیشتر حفظ کن.</p><div className="card-row"><Button onClick={() => go("lesson")}>شروع تمرین <Icon name="arrow"/></Button><div className="day-count"><b>۱۲</b><span>روز پیوسته</span></div></div></section>
@@ -276,8 +277,23 @@ function Checkout({ go, plan }: { go:(p:Page)=>void; plan:string }) {
 }
 
 export default function App() {
-  const [page,setPage]=useState<Page>("home");
+  const [session,setSession]=useState<AuthSession|null>(()=>getStoredSession());
+  const [page,setPage]=useState<Page>(()=>getStoredSession()?"dashboard":"home");
   const [plan,setPlan]=useState("طلا");
+  useEffect(()=>{
+    let active=true;
+    restoreSession().then(restored=>{
+      if(!active) return;
+      setSession(restored);
+      if(!restored && page!=="home" && page!=="about" && page!=="pricing") setPage("home");
+    });
+    return ()=>{active=false};
+  },[]);
   const go=(p:Page)=>{setPage(p);window.scrollTo({top:0,behavior:"smooth"})};
-  return <div dir="rtl">{page==="home"?<Home go={go}/>:page==="about"?<About go={go}/>:page==="auth"?<Auth go={go}/>:page==="dashboard"?<Dashboard go={go}/>:page==="lesson"?<Lesson go={go}/>:page==="coach"?<Coach go={go}/>:page==="pricing"?<Pricing go={go} choose={setPlan}/>:<Checkout go={go} plan={plan}/>}<SupportWidget showButton={page==="home"||page==="dashboard"}/></div>;
+  const logout=async()=>{
+    await signOut(session);
+    setSession(null);
+    go("home");
+  };
+  return <div dir="rtl">{page==="home"?<Home go={go}/>:page==="about"?<About go={go}/>:page==="auth"?<Auth go={go} onAuthenticated={setSession}/>:page==="dashboard"?<Dashboard go={go} onLogout={logout}/>:page==="lesson"?<Lesson go={go}/>:page==="coach"?<Coach go={go}/>:page==="pricing"?<Pricing go={go} choose={setPlan}/>:<Checkout go={go} plan={plan}/>}<SupportWidget showButton={page==="home"||page==="dashboard"}/></div>;
 }
