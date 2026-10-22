@@ -101,6 +101,21 @@ export async function getActivePlan(session: AuthSession) {
   return entitlements[0]?.plans?.name || null;
 }
 
+export async function deleteAccount(session: AuthSession) {
+  const { anonKey } = requireConfig();
+  const response = await fetch(endpoint("/rest/v1/rpc/delete_my_account"), {
+    method: "POST",
+    headers: {
+      apikey: anonKey,
+      Authorization: `Bearer ${session.access_token}`,
+      "Content-Type": "application/json",
+    },
+    body: "{}",
+  });
+  if (!response.ok) throw new Error("حذف حساب انجام نشد.");
+  clearSession();
+}
+
 export type PublishedLesson = {
   id: string;
   slug: string;
