@@ -14,6 +14,7 @@ const Icon = ({ name }: { name: string }) => {
     check: <path d="m5 12 4 4L19 6" />,
     send: <path d="m4 4 17 8-17 8 3-8-3-8Zm3 8h14" />,
     lock: <><rect x="5" y="10" width="14" height="11" rx="2" /><path d="M8 10V7a4 4 0 0 1 8 0v3" /></>,
+    edit: <><path d="M12 20h9" /><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4Z" /></>,
     close: <><path d="m6 6 12 12" /><path d="m18 6-12 12" /></>,
   };
   return <svg viewBox="0 0 24 24" aria-hidden="true">{paths[name]}</svg>;
@@ -229,14 +230,29 @@ function Dashboard({ go, onLogout, displayName }: { go: (p: Page) => void; onLog
   </main><BottomNav page="dashboard" go={go}/></>;
 }
 
-function Profile({ go, session, profile, ...auth }: { go: (p: Page) => void; session: AuthSession; profile: UserProfile | null } & HeaderProps) {
+function Profile({ go, session, profile, onUpdateUsername, ...auth }: { go: (p: Page) => void; session: AuthSession; profile: UserProfile | null; onUpdateUsername: (username: string) => Promise<void> } & HeaderProps) {
   const roleLabels={learner:"یادگیرنده",mentor:"منتور",admin:"مدیر"};
   const contact=session.user.email || session.user.phone || "ثبت نشده";
   const displayName=profile?.username || profile?.display_name || session.user.user_metadata?.username || "ثبت نشده";
+  const [editing,setEditing]=useState(false);
+  const [username,setUsername]=useState(displayName==="ثبت نشده"?"":displayName);
+  const [saving,setSaving]=useState(false);
+  const [message,setMessage]=useState("");
+  const saveUsername=async()=>{
+    if(!username.trim()) return;
+    setSaving(true); setMessage("");
+    try {
+      await onUpdateUsername(username);
+      setEditing(false);
+      setMessage("نام کاربری ذخیره شد.");
+    } catch (error) {
+      setMessage(error instanceof Error ? error.message : "ذخیرهٔ نام کاربری انجام نشد.");
+    } finally { setSaving(false); }
+  };
   return <><Header go={go} {...auth}/><main className="app-page profile-page">
     <button className="back" onClick={()=>go("dashboard")}><Icon name="arrow"/> بازگشت به داشبورد</button>
     <div className="profile-heading"><span className="eyebrow">حساب کاربری</span><h1>پروفایل من</h1><p>اطلاعات حساب و وضعیت عضویت تو</p></div>
-    <section className="profile-card"><div className="profile-avatar">{displayName.slice(0,1)}</div><div className="profile-details"><div><span>نام کاربری</span><strong>{displayName}</strong></div><div><span>ایمیل یا شماره موبایل</span><strong dir="ltr">{contact}</strong></div><div><span>نقش حساب</span><strong>{roleLabels[profile?.role || "learner"]}</strong></div><div><span>وضعیت نشست</span><strong className="profile-status">فعال</strong></div></div></section>
+    <section className="profile-card"><div className="profile-avatar">{displayName.slice(0,1)}</div><div className="profile-details"><div className="username-field"><span>نام کاربری</span>{editing?<div className="username-editor"><input value={username} onChange={event=>setUsername(event.target.value)} dir="auto" autoComplete="username" aria-label="نام کاربری"/><Button onClick={saveUsername} disabled={saving||!username.trim()}>{saving?"در حال ذخیره…":"ذخیره"}</Button><button className="cancel-edit" onClick={()=>{setEditing(false);setUsername(displayName);setMessage("")}}>انصراف</button></div>:<div className="username-value"><strong>{displayName}</strong><button className="edit-username" aria-label="ویرایش نام کاربری" onClick={()=>{setUsername(displayName==="ثبت نشده"?"":displayName);setEditing(true);setMessage("")}}><Icon name="edit"/></button></div>}{message&&<small className="profile-message">{message}</small>}</div><div><span>ایمیل یا شماره موبایل</span><strong dir="ltr">{contact}</strong></div><div><span>نقش حساب</span><strong>{roleLabels[profile?.role || "learner"]}</strong></div><div><span>وضعیت نشست</span><strong className="profile-status">فعال</strong></div></div></section>
   </main><BottomNav page="profile" go={go}/></>;
 }
 
@@ -351,6 +367,14 @@ export default function App() {
     setSession(nextSession);
     getUserProfile(nextSession).then(setProfile).catch(()=>setProfile(null));
   };
+  const updateUsername=async(username:string)=>{
+    if(!session) return;
+    const updatedProfiles=await updateUserProfile(session, username);
+    const nextSession={...session,user:{...session.user,user_metadata:{...session.user.user_metadata,username:username.trim(),display_name:username.trim()}}};
+    saveSession(nextSession);
+    setSession(nextSession);
+    setProfile(current=>updatedProfiles[0] || current);
+  };
   const logout=async()=>{
     await signOut(session);
     setSession(null);
@@ -360,5 +384,5 @@ export default function App() {
   const displayName=profile?.username || profile?.display_name || session?.user.user_metadata?.username || session?.user.user_metadata?.display_name;
   const visiblePage=!session && protectedPages.includes(page)?"auth":page;
   const headerAuth={authenticated:Boolean(session),displayName,onLogout:logout};
-  return <div dir="rtl">{visiblePage==="home"?<Home go={go} {...headerAuth}/>:visiblePage==="about"?<About go={go} {...headerAuth}/>:visiblePage==="auth"?<Auth go={go} onAuthenticated={authenticated}/>:visiblePage==="dashboard"?<Dashboard go={go} displayName={displayName} onLogout={logout}/>:visiblePage==="profile"?<Profile go={go} session={session!} profile={profile} {...headerAuth}/>:visiblePage==="lesson"?<Lesson go={go} {...headerAuth}/>:visiblePage==="coach"?<Coach go={go} {...headerAuth}/>:visiblePage==="pricing"?<Pricing go={go} choose={setPlan} {...headerAuth}/>:<Checkout go={go} plan={plan} {...headerAuth}/>}<SupportWidget showButton={visiblePage==="home"||visiblePage==="dashboard"}/></div>;
+  return <div dir="rtl">{visiblePage==="home"?<Home go={go} {...headerAuth}/>:visiblePage==="about"?<About go={go} {...headerAuth}/>:visiblePage==="auth"?<Auth go={go} onAuthenticated={authenticated}/>:visiblePage==="dashboard"?<Dashboard go={go} displayName={displayName} onLogout={logout}/>:visiblePage==="profile"?<Profile go={go} session={session!} profile={profile} onUpdateUsername={updateUsername} {...headerAuth}/>:visiblePage==="lesson"?<Lesson go={go} {...headerAuth}/>:visiblePage==="coach"?<Coach go={go} {...headerAuth}/>:visiblePage==="pricing"?<Pricing go={go} choose={setPlan} {...headerAuth}/>:<Checkout go={go} plan={plan} {...headerAuth}/>}<SupportWidget showButton={visiblePage==="home"||visiblePage==="dashboard"}/></div>;
 }

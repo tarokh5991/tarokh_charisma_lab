@@ -133,7 +133,8 @@ export async function updateUserProfile(session: AuthSession, username: string) 
     body: JSON.stringify({ username: username.trim(), display_name: username.trim() }),
   });
   if (!response.ok) {
-    const payload = await response.json().catch(() => null) as { message?: string; details?: string } | null;
+    const payload = await response.json().catch(() => null) as { code?: string; message?: string; details?: string } | null;
+    if (payload?.code === "23505") throw new Error("این نام کاربری قبلاً انتخاب شده است.");
     throw new Error(payload?.message || payload?.details || "ذخیرهٔ نام کاربری انجام نشد.");
   }
   return (await response.json().catch(() => [])) as UserProfile[];
