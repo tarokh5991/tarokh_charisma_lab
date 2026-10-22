@@ -216,18 +216,29 @@ function Auth({ go, onAuthenticated }: { go: (p: Page) => void; onAuthenticated:
   </main></>;
 }
 
-function Dashboard({ go, onLogout, displayName }: { go: (p: Page) => void; onLogout: () => void; displayName?: string }) {
+function Dashboard({ go, onLogout, displayName, session, onOpenLesson }: { go: (p: Page) => void; onLogout: () => void; displayName?: string; session: AuthSession; onOpenLesson: (lesson: PublishedLesson) => void }) {
   const [showLeaders,setShowLeaders]=useState(false);
   const [showMe,setShowMe]=useState(true);
+  const [lessons,setLessons]=useState<PublishedLesson[]>([]);
+  const [completedIds,setCompletedIds]=useState<Set<string>>(new Set());
+  useEffect(()=>{
+    Promise.all([getPublishedLessons(),getLessonProgress(session)]).then(([published,progress])=>{
+      setLessons(published);
+      setCompletedIds(new Set(progress.filter(item=>item.completed_at).map(item=>item.lesson_id)));
+    }).catch(()=>{});
+  },[session]);
+  const nextLesson=lessons.find(lesson=>!completedIds.has(lesson.id));
+  const completedCount=completedIds.size;
+  const percentage=lessons.length?Math.round(completedCount/lessons.length*100):0;
   const leaders=[["ش","شاهین آرام","۱۴"],["ک","کاوشگر شب","۱۲"],["م","مرد مسیر","۱۱"],["ذ","ذهن روشن","۱۰"],["س","سرو استوار","۹"],["ر","رهرو آرام","۹"],["ن","نقطه شروع","۸"],["پ","پلنگ صبور","۷"],["ق","قاب طلایی","۷"],["گ","گام بعدی","۶"]];
   return <><Header go={go} authenticated displayName={displayName} onLogout={onLogout}/><main className="app-page">
     <div className="welcome"><div><span className="eyebrow">سلام، {displayName || "دوست کاریزما"}</span><h2>امروز یک قدم جلوتر برو.</h2></div><div className="level"><span>سطح فعلی:</span><b>کاوشگر</b></div></div>
     <div className="dashboard-grid">
-      <section className="today-card"><span className="pill">تمرین امروز · ۱۰ دقیقه</span><h3>تماس چشمی قدرتمند</h3><p>در سه گفت‌وگوی امروز، تماس چشمی را یک ثانیه بیشتر حفظ کن.</p><div className="card-row"><Button onClick={() => go("library")}>مشاهده درس‌ها <Icon name="arrow"/></Button><div className="day-count"><b>۱۲</b><span>روز پیوسته</span></div></div></section>
-      <section className="progress-card"><div className="ring"><div><b>۳۸٪</b><span>پیشرفت کل</span></div></div><div><span>مسیر یادگیری</span><h3>اعتماد‌به‌نفس</h3><p>۴ از ۱۵ درس کامل شده</p><div className="progress"><i/></div></div></section>
+      <section className="today-card"><span className="pill">{nextLesson?`درس بعدی · ${nextLesson.duration_minutes} دقیقه`:"مسیر را کامل کردی"}</span><h3>{nextLesson?.title || "همهٔ درس‌ها تکمیل شدند"}</h3><p>{nextLesson?.summary || "برای مرور نکته‌ها و تمرین‌ها به کتابخانه برگرد."}</p><div className="card-row"><Button onClick={() => nextLesson?onOpenLesson(nextLesson):go("library")}>{nextLesson?"شروع مطالعه":"مشاهده درس‌ها"} <Icon name="arrow"/></Button><div className="day-count"><b>{completedCount}</b><span>درس تکمیل‌شده</span></div></div></section>
+      <section className="progress-card"><div className="ring" style={{background:`conic-gradient(var(--gold) ${percentage}%,#292824 0)`}}><div><b>{percentage}٪</b><span>پیشرفت کل</span></div></div><div><span>مسیر یادگیری</span><h3>{nextLesson?.course_modules.learning_paths.title || "CLEAR"}</h3><p>{completedCount} از {lessons.length} درس کامل شده</p><div className="progress"><i style={{width:`${percentage}%`}}/></div></div></section>
     </div>
     <div className="section-head"><h3>ادامه مسیر</h3><button onClick={() => go("library")}>مشاهده همه</button></div>
-    <div className="lesson-row"><span>۰۵</span><div><small>فصل اول · اعتماد‌به‌نفس</small><h3>صدایی که شنیده می‌شود</h3><p>کنترل تنفس، ریتم و قدرت صدا</p></div><Button onClick={() => go("lesson")} ghost><Icon name="play"/> ادامه درس</Button></div>
+    {nextLesson?<div className="lesson-row"><span>{String(lessons.indexOf(nextLesson)+1).padStart(2,"0")}</span><div><small>{nextLesson.course_modules.learning_paths.title}</small><h3>{nextLesson.title}</h3><p>{nextLesson.summary}</p></div><Button onClick={() => onOpenLesson(nextLesson)} ghost><Icon name="play"/> ادامه درس</Button></div>:<p className="library-state">همهٔ درس‌های موجود را تکمیل کرده‌ای.</p>}
     <section className="leaderboard"><div className="leader-head"><div><span className="eyebrow">تمرین‌های انجام‌شده در هفته</span><h3>برترین‌های این هفته</h3></div><button className={`privacy-toggle ${showMe?"on":""}`} role="switch" aria-checked={showMe} onClick={()=>setShowMe(!showMe)}><i/><span>نمایش من در جدول</span></button></div>
       <div className="leader-list">{leaders.slice(0,showLeaders?10:3).map(([initial,name,count],index)=><div className="leader-row" key={name}><b className="rank">{index+1}</b><span className="leader-avatar">{initial}</span><strong>{name}</strong><span className="practice-count"><b>{count}</b> تمرین</span></div>)}</div>
       <button className="show-leaders" onClick={()=>setShowLeaders(!showLeaders)}>{showLeaders?"نمایش سه نفر اول":"مشاهده‌ی همه"}</button>
@@ -447,5 +458,5 @@ export default function App() {
   const displayName=profile?.username || profile?.display_name || session?.user.user_metadata?.username || session?.user.user_metadata?.display_name;
   const visiblePage=!session && protectedPages.includes(page)?"auth":page;
   const headerAuth={authenticated:Boolean(session),displayName,onLogout:logout};
-  return <div dir="rtl">{visiblePage==="home"?<Home go={go} {...headerAuth}/>:visiblePage==="about"?<About go={go} {...headerAuth}/>:visiblePage==="auth"?<Auth go={go} onAuthenticated={authenticated}/>:visiblePage==="dashboard"?<Dashboard go={go} displayName={displayName} onLogout={logout}/>:visiblePage==="library"?<Library go={go} onOpenLesson={openLesson} {...headerAuth}/>:visiblePage==="profile"?<Profile go={go} session={session!} profile={profile} activePlan={activePlan} onUpdateUsername={updateUsername} {...headerAuth}/>:visiblePage==="lesson"?<Lesson go={go} lesson={activeLesson} session={session!} {...headerAuth}/>:visiblePage==="coach"?<Coach go={go} {...headerAuth}/>:visiblePage==="pricing"?<Pricing go={go} choose={setPlan} {...headerAuth}/>:<Checkout go={go} plan={plan} {...headerAuth}/>}<SupportWidget showButton={visiblePage==="home"||visiblePage==="dashboard"}/></div>;
+  return <div dir="rtl">{visiblePage==="home"?<Home go={go} {...headerAuth}/>:visiblePage==="about"?<About go={go} {...headerAuth}/>:visiblePage==="auth"?<Auth go={go} onAuthenticated={authenticated}/>:visiblePage==="dashboard"?<Dashboard go={go} displayName={displayName} onLogout={logout} session={session!} onOpenLesson={openLesson}/>:visiblePage==="library"?<Library go={go} onOpenLesson={openLesson} {...headerAuth}/>:visiblePage==="profile"?<Profile go={go} session={session!} profile={profile} activePlan={activePlan} onUpdateUsername={updateUsername} {...headerAuth}/>:visiblePage==="lesson"?<Lesson go={go} lesson={activeLesson} session={session!} {...headerAuth}/>:visiblePage==="coach"?<Coach go={go} {...headerAuth}/>:visiblePage==="pricing"?<Pricing go={go} choose={setPlan} {...headerAuth}/>:<Checkout go={go} plan={plan} {...headerAuth}/>}<SupportWidget showButton={visiblePage==="home"||visiblePage==="dashboard"}/></div>;
 }
