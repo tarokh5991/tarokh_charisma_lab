@@ -170,7 +170,7 @@ function Auth({ go, onAuthenticated }: { go: (p: Page) => void; onAuthenticated:
       const nextSession={...session,user:{...session.user,user_metadata:{...session.user.user_metadata,username:username.trim(),display_name:username.trim()}}};
       saveSession(nextSession);
       onAuthenticated(nextSession);
-      go("dashboard");
+      go("home");
       void (async()=>{
         try {
           await updateUserProfile(session, username);
