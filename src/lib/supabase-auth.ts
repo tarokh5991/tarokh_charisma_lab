@@ -91,6 +91,29 @@ export async function getUserProfile(session: AuthSession) {
   return profiles[0] || null;
 }
 
+export type PublishedLesson = {
+  id: string;
+  slug: string;
+  title: string;
+  summary: string;
+  duration_minutes: number;
+  position: number;
+  course_modules: {
+    title: string;
+    learning_paths: { title: string; position: number };
+  };
+};
+
+export async function getPublishedLessons() {
+  const { anonKey } = requireConfig();
+  const response = await fetch(endpoint("/rest/v1/lessons?select=id,slug,title,summary,duration_minutes,position,course_modules!inner(title,learning_paths!inner(title,position))&is_published=eq.true"), {
+    headers: { apikey: anonKey },
+  });
+  if (!response.ok) throw new Error("دریافت درس‌ها انجام نشد.");
+  const lessons = await response.json() as PublishedLesson[];
+  return lessons.sort((first, second) => first.course_modules.learning_paths.position - second.course_modules.learning_paths.position || first.position - second.position);
+}
+
 function clearSession() {
   localStorage.removeItem("tarokh-auth-session");
 }

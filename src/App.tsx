@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
-import { getStoredSession, getUserProfile, requestOtp, restoreSession, saveAssessment, saveSession, signOut, updateUserProfile, verifyOtp, type AuthSession, type UserProfile } from "./lib/supabase-auth";
+import { getPublishedLessons, getStoredSession, getUserProfile, requestOtp, restoreSession, saveAssessment, saveSession, signOut, updateUserProfile, verifyOtp, type AuthSession, type PublishedLesson, type UserProfile } from "./lib/supabase-auth";
 
-type Page = "home" | "about" | "auth" | "dashboard" | "lesson" | "coach" | "pricing" | "checkout" | "profile";
+type Page = "home" | "about" | "auth" | "dashboard" | "library" | "lesson" | "coach" | "pricing" | "checkout" | "profile";
 
 const Icon = ({ name }: { name: string }) => {
   const paths: Record<string, React.ReactNode> = {
@@ -36,7 +36,7 @@ const Header = ({ go, simple = false, authenticated = false, displayName, onLogo
 
 const BottomNav = ({ page, go }: { page: Page; go: (p: Page) => void }) => (
   <nav className="bottom-nav">
-    {[["dashboard","home","خانه"],["lesson","book","آموزش"],["coach","chat","مربی AI"],["profile","user","حساب من"]].map(([p,i,l]) => (
+    {[["dashboard","home","خانه"],["library","book","آموزش"],["coach","chat","مربی AI"],["profile","user","حساب من"]].map(([p,i,l]) => (
       <button className={page === p ? "active" : ""} onClick={() => go(p as Page)} key={p}><Icon name={i}/><span>{l}</span></button>
     ))}
   </nav>
@@ -216,10 +216,10 @@ function Dashboard({ go, onLogout, displayName }: { go: (p: Page) => void; onLog
   return <><Header go={go} authenticated displayName={displayName} onLogout={onLogout}/><main className="app-page">
     <div className="welcome"><div><span className="eyebrow">سلام، {displayName || "دوست کاریزما"}</span><h2>امروز یک قدم جلوتر برو.</h2></div><div className="level"><span>سطح فعلی:</span><b>کاوشگر</b></div></div>
     <div className="dashboard-grid">
-      <section className="today-card"><span className="pill">تمرین امروز · ۱۰ دقیقه</span><h3>تماس چشمی قدرتمند</h3><p>در سه گفت‌وگوی امروز، تماس چشمی را یک ثانیه بیشتر حفظ کن.</p><div className="card-row"><Button onClick={() => go("lesson")}>شروع تمرین <Icon name="arrow"/></Button><div className="day-count"><b>۱۲</b><span>روز پیوسته</span></div></div></section>
+      <section className="today-card"><span className="pill">تمرین امروز · ۱۰ دقیقه</span><h3>تماس چشمی قدرتمند</h3><p>در سه گفت‌وگوی امروز، تماس چشمی را یک ثانیه بیشتر حفظ کن.</p><div className="card-row"><Button onClick={() => go("library")}>مشاهده درس‌ها <Icon name="arrow"/></Button><div className="day-count"><b>۱۲</b><span>روز پیوسته</span></div></div></section>
       <section className="progress-card"><div className="ring"><div><b>۳۸٪</b><span>پیشرفت کل</span></div></div><div><span>مسیر یادگیری</span><h3>اعتماد‌به‌نفس</h3><p>۴ از ۱۵ درس کامل شده</p><div className="progress"><i/></div></div></section>
     </div>
-    <div className="section-head"><h3>ادامه مسیر</h3><button onClick={() => go("lesson")}>مشاهده همه</button></div>
+    <div className="section-head"><h3>ادامه مسیر</h3><button onClick={() => go("library")}>مشاهده همه</button></div>
     <div className="lesson-row"><span>۰۵</span><div><small>فصل اول · اعتماد‌به‌نفس</small><h3>صدایی که شنیده می‌شود</h3><p>کنترل تنفس، ریتم و قدرت صدا</p></div><Button onClick={() => go("lesson")} ghost><Icon name="play"/> ادامه درس</Button></div>
     <section className="leaderboard"><div className="leader-head"><div><span className="eyebrow">تمرین‌های انجام‌شده در هفته</span><h3>برترین‌های این هفته</h3></div><button className={`privacy-toggle ${showMe?"on":""}`} role="switch" aria-checked={showMe} onClick={()=>setShowMe(!showMe)}><i/><span>نمایش من در جدول</span></button></div>
       <div className="leader-list">{leaders.slice(0,showLeaders?10:3).map(([initial,name,count],index)=><div className="leader-row" key={name}><b className="rank">{index+1}</b><span className="leader-avatar">{initial}</span><strong>{name}</strong><span className="practice-count"><b>{count}</b> تمرین</span></div>)}</div>
@@ -228,6 +228,27 @@ function Dashboard({ go, onLogout, displayName }: { go: (p: Page) => void; onLog
       <p className="leader-note">رتبه‌بندی ابتدای هر هفته از صفر شروع می‌شود.</p>
     </section>
   </main><BottomNav page="dashboard" go={go}/></>;
+}
+
+function Library({ go, ...auth }: { go: (p: Page) => void } & HeaderProps) {
+  const [lessons,setLessons]=useState<PublishedLesson[]>([]);
+  const [loading,setLoading]=useState(true);
+  const [message,setMessage]=useState("");
+  useEffect(()=>{
+    let active=true;
+    getPublishedLessons().then(result=>{
+      if(active) setLessons(result);
+    }).catch(error=>{
+      if(active) setMessage(error instanceof Error ? error.message : "دریافت درس‌ها انجام نشد.");
+    }).finally(()=>{
+      if(active) setLoading(false);
+    });
+    return ()=>{active=false};
+  },[]);
+  return <><Header go={go} {...auth}/><main className="app-page library-page">
+    <div className="library-heading"><span className="eyebrow">آکادمی کاریزما</span><h1>مسیرهای یادگیری</h1><p>پنج درس آغازین CLEAR را با تمرین‌های واقعی دنبال کن.</p></div>
+    {loading?<p className="library-state">در حال دریافت درس‌ها…</p>:message?<p className="library-state library-error">{message}</p>:<div className="lesson-library">{lessons.map((lesson,index)=><article key={lesson.id} className="lesson-library-card"><span className="lesson-number">{String(index+1).padStart(2,"0")}</span><div><small>{lesson.course_modules.learning_paths.title} · {lesson.duration_minutes} دقیقه</small><h2>{lesson.title}</h2><p>{lesson.summary}</p><span className="lesson-available">درس متنی آمادهٔ مطالعه</span></div></article>)}</div>}
+  </main><BottomNav page="library" go={go}/></>;
 }
 
 function Profile({ go, session, profile, onUpdateUsername, ...auth }: { go: (p: Page) => void; session: AuthSession; profile: UserProfile | null; onUpdateUsername: (username: string) => Promise<void> } & HeaderProps) {
@@ -333,7 +354,7 @@ export default function App() {
   const [profile,setProfile]=useState<UserProfile|null>(null);
   const [page,setPage]=useState<Page>(()=>getStoredSession()?"dashboard":"home");
   const [plan,setPlan]=useState("طلا");
-  const protectedPages:Page[]=["dashboard","lesson","coach","checkout","profile"];
+  const protectedPages:Page[]=["dashboard","library","lesson","coach","checkout","profile"];
   useEffect(()=>{
     let active=true;
     restoreSession().then(async restored=>{
@@ -384,5 +405,5 @@ export default function App() {
   const displayName=profile?.username || profile?.display_name || session?.user.user_metadata?.username || session?.user.user_metadata?.display_name;
   const visiblePage=!session && protectedPages.includes(page)?"auth":page;
   const headerAuth={authenticated:Boolean(session),displayName,onLogout:logout};
-  return <div dir="rtl">{visiblePage==="home"?<Home go={go} {...headerAuth}/>:visiblePage==="about"?<About go={go} {...headerAuth}/>:visiblePage==="auth"?<Auth go={go} onAuthenticated={authenticated}/>:visiblePage==="dashboard"?<Dashboard go={go} displayName={displayName} onLogout={logout}/>:visiblePage==="profile"?<Profile go={go} session={session!} profile={profile} onUpdateUsername={updateUsername} {...headerAuth}/>:visiblePage==="lesson"?<Lesson go={go} {...headerAuth}/>:visiblePage==="coach"?<Coach go={go} {...headerAuth}/>:visiblePage==="pricing"?<Pricing go={go} choose={setPlan} {...headerAuth}/>:<Checkout go={go} plan={plan} {...headerAuth}/>}<SupportWidget showButton={visiblePage==="home"||visiblePage==="dashboard"}/></div>;
+  return <div dir="rtl">{visiblePage==="home"?<Home go={go} {...headerAuth}/>:visiblePage==="about"?<About go={go} {...headerAuth}/>:visiblePage==="auth"?<Auth go={go} onAuthenticated={authenticated}/>:visiblePage==="dashboard"?<Dashboard go={go} displayName={displayName} onLogout={logout}/>:visiblePage==="library"?<Library go={go} {...headerAuth}/>:visiblePage==="profile"?<Profile go={go} session={session!} profile={profile} onUpdateUsername={updateUsername} {...headerAuth}/>:visiblePage==="lesson"?<Lesson go={go} {...headerAuth}/>:visiblePage==="coach"?<Coach go={go} {...headerAuth}/>:visiblePage==="pricing"?<Pricing go={go} choose={setPlan} {...headerAuth}/>:<Checkout go={go} plan={plan} {...headerAuth}/>}<SupportWidget showButton={visiblePage==="home"||visiblePage==="dashboard"}/></div>;
 }
