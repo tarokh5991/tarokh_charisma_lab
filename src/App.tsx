@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { completeLesson, deleteAccount, getActivePlan, getLessonProgress, getPublishedLessons, getStoredSession, getUserProfile, requestOtp, restoreSession, saveAssessment, saveSession, signOut, updateUserProfile, verifyOtp, type AuthSession, type PublishedLesson, type UserProfile } from "./lib/supabase-auth";
+import { completeExercise, completeLesson, deleteAccount, getActivePlan, getLessonProgress, getPublishedLessons, getStoredSession, getUserProfile, requestOtp, restoreSession, saveAssessment, saveSession, signOut, updateUserProfile, verifyOtp, type AuthSession, type PublishedLesson, type UserProfile } from "./lib/supabase-auth";
 
 type Page = "home" | "about" | "auth" | "dashboard" | "library" | "lesson" | "coach" | "pricing" | "checkout" | "profile";
 
@@ -298,11 +298,17 @@ function Profile({ go, session, profile, activePlan, onUpdateUsername, onDeleteA
 
 function Lesson({ go, lesson, session, ...auth }: { go: (p: Page) => void; lesson: PublishedLesson | null; session: AuthSession } & HeaderProps) {
   const [completed,setCompleted]=useState(false);
+  const [exerciseCompleted,setExerciseCompleted]=useState(false);
   const [saving,setSaving]=useState(false);
+  const [exerciseSaving,setExerciseSaving]=useState(false);
   const [message,setMessage]=useState("");
   useEffect(()=>{
     if(!lesson) return;
-    getLessonProgress(session).then(progress=>setCompleted(progress.some(item=>item.lesson_id===lesson.id&&item.completed_at))).catch(()=>{});
+    getLessonProgress(session).then(progress=>{
+      const current=progress.find(item=>item.lesson_id===lesson.id);
+      setCompleted(Boolean(current?.completed_at));
+      setExerciseCompleted(Boolean(current?.exercise_completed_at));
+    }).catch(()=>{});
   },[lesson,session]);
   if(!lesson) return <><Header go={go} {...auth}/><main className="app-page lesson-page"><button className="back" onClick={() => go("library")}><Icon name="arrow"/> بازگشت به کتابخانه</button><p className="library-state">برای مطالعه، یک درس را از کتابخانه انتخاب کن.</p></main><BottomNav page="lesson" go={go}/></>;
   const { body }=lesson;
@@ -310,9 +316,13 @@ function Lesson({ go, lesson, session, ...auth }: { go: (p: Page) => void; lesso
     setSaving(true); setMessage("");
     try { await completeLesson(session,lesson.id); setCompleted(true); } catch(error) { setMessage(error instanceof Error ? error.message : "ثبت تکمیل مطالعه انجام نشد."); } finally { setSaving(false); }
   };
+  const markExerciseCompleted=async()=>{
+    setExerciseSaving(true); setMessage("");
+    try { await completeExercise(session,lesson.id); setExerciseCompleted(true); } catch(error) { setMessage(error instanceof Error ? error.message : "ثبت انجام تمرین انجام نشد."); } finally { setExerciseSaving(false); }
+  };
   return <><Header go={go} {...auth}/><main className="app-page lesson-page text-lesson-page">
     <button className="back" onClick={() => go("library")}><Icon name="arrow"/> بازگشت به کتابخانه</button>
-    <article className="text-lesson"><span className="eyebrow">{lesson.course_modules.learning_paths.title} · {lesson.duration_minutes} دقیقه مطالعه</span><h1>{lesson.title}</h1><p className="lesson-lead">{lesson.summary}</p><div className="quote">«{body.quote}»</div><section><h2>هدف درس</h2><p>{body.goal}</p></section><section><h2>ایدهٔ اصلی</h2>{body.idea.map(item=><p key={item}>{item}</p>)}</section><section><h2>مثال</h2><p>{body.example}</p></section><section><h2>{body.exercise.title}</h2><ol>{body.exercise.steps.map(step=><li key={step}>{step}</li>)}</ol></section><section><h2>نکتهٔ مهم</h2><p>{body.mistake}</p></section><section><h2>خلاصه</h2><ul>{body.summary.map(item=><li key={item}>{item}</li>)}</ul></section><div className="lesson-completion">{completed?<span>مطالعهٔ این درس ثبت شد.</span>:<Button onClick={markCompleted} disabled={saving}>{saving?"در حال ثبت…":"مطالعه را تمام کردم"}</Button>}{message&&<small>{message}</small>}<Button ghost onClick={()=>go("library")}>بازگشت به کتابخانه <Icon name="arrow"/></Button></div></article>
+    <article className="text-lesson"><span className="eyebrow">{lesson.course_modules.learning_paths.title} · {lesson.duration_minutes} دقیقه مطالعه</span><h1>{lesson.title}</h1><p className="lesson-lead">{lesson.summary}</p><div className="quote">«{body.quote}»</div><section><h2>هدف درس</h2><p>{body.goal}</p></section><section><h2>ایدهٔ اصلی</h2>{body.idea.map(item=><p key={item}>{item}</p>)}</section><section><h2>مثال</h2><p>{body.example}</p></section><section><h2>{body.exercise.title}</h2><ol>{body.exercise.steps.map(step=><li key={step}>{step}</li>)}</ol><div className="exercise-completion">{exerciseCompleted?<span>تمرین انجام‌شده ثبت شد.</span>:<Button ghost onClick={markExerciseCompleted} disabled={exerciseSaving}>{exerciseSaving?"در حال ثبت…":"تمرین را انجام دادم"}</Button>}</div></section><section><h2>نکتهٔ مهم</h2><p>{body.mistake}</p></section><section><h2>خلاصه</h2><ul>{body.summary.map(item=><li key={item}>{item}</li>)}</ul></section><div className="lesson-completion">{completed?<span>مطالعهٔ این درس ثبت شد.</span>:<Button onClick={markCompleted} disabled={saving}>{saving?"در حال ثبت…":"مطالعه را تمام کردم"}</Button>}{message&&<small>{message}</small>}<Button ghost onClick={()=>go("library")}>بازگشت به کتابخانه <Icon name="arrow"/></Button></div></article>
   </main><BottomNav page="lesson" go={go}/></>;
 }
 

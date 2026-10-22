@@ -151,11 +151,12 @@ export async function getPublishedLessons() {
 export type LessonProgress = {
   lesson_id: string;
   completed_at: string | null;
+  exercise_completed_at: string | null;
 };
 
 export async function getLessonProgress(session: AuthSession) {
   const { anonKey } = requireConfig();
-  const response = await fetch(endpoint(`/rest/v1/lesson_progress?user_id=eq.${encodeURIComponent(session.user.id)}&select=lesson_id,completed_at`), {
+  const response = await fetch(endpoint(`/rest/v1/lesson_progress?user_id=eq.${encodeURIComponent(session.user.id)}&select=lesson_id,completed_at,exercise_completed_at`), {
     headers: { apikey: anonKey, Authorization: `Bearer ${session.access_token}` },
   });
   if (!response.ok) throw new Error("دریافت وضعیت مطالعه انجام نشد.");
@@ -175,6 +176,21 @@ export async function completeLesson(session: AuthSession, lessonId: string) {
     body: JSON.stringify({ user_id: session.user.id, lesson_id: lessonId, completed_at: new Date().toISOString() }),
   });
   if (!response.ok) throw new Error("ثبت تکمیل مطالعه انجام نشد.");
+}
+
+export async function completeExercise(session: AuthSession, lessonId: string) {
+  const { anonKey } = requireConfig();
+  const response = await fetch(endpoint("/rest/v1/lesson_progress?on_conflict=user_id,lesson_id"), {
+    method: "POST",
+    headers: {
+      apikey: anonKey,
+      Authorization: `Bearer ${session.access_token}`,
+      "Content-Type": "application/json",
+      Prefer: "resolution=merge-duplicates",
+    },
+    body: JSON.stringify({ user_id: session.user.id, lesson_id: lessonId, exercise_completed_at: new Date().toISOString() }),
+  });
+  if (!response.ok) throw new Error("ثبت انجام تمرین انجام نشد.");
 }
 
 function clearSession() {
