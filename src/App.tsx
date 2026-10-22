@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { getStoredSession, getUserProfile, requestOtp, restoreSession, saveSession, signOut, updateUserProfile, verifyOtp, type AuthSession, type UserProfile } from "./lib/supabase-auth";
+import { getStoredSession, getUserProfile, requestOtp, restoreSession, saveAssessment, saveSession, signOut, updateUserProfile, verifyOtp, type AuthSession, type UserProfile } from "./lib/supabase-auth";
 
 type Page = "home" | "about" | "auth" | "dashboard" | "lesson" | "coach" | "pricing" | "checkout" | "profile";
 
@@ -113,6 +113,7 @@ function Auth({ go, onAuthenticated }: { go: (p: Page) => void; onAuthenticated:
   const [message,setMessage]=useState("");
   const [busy,setBusy]=useState(false);
   const [cooldown,setCooldown]=useState(0);
+  const [isSignup,setIsSignup]=useState(false);
   useEffect(()=>{
     if(cooldown===0) return;
     const timer=window.setInterval(()=>setCooldown(value=>Math.max(0,value-1)),1000);
@@ -146,11 +147,12 @@ function Auth({ go, onAuthenticated }: { go: (p: Page) => void; onAuthenticated:
     A:["آگاهی اجتماعی","نشانه‌های رفتاری طرف مقابل را بهتر می‌خوانی."],
     R:["ایجاد ارتباط","شروع و ادامه‌دادن ارتباط برایت طبیعی‌تر می‌شود."],
   };
-  const submitOtp=async(isSignup=false)=>{
+  const submitOtp=async(signup=false)=>{
     if(!identifier.trim() || !username.trim() || cooldown>0) return;
     setBusy(true); setMessage("");
     try {
-      await requestOtp(identifier.trim(), accountTab, isSignup ? username : undefined);
+      await requestOtp(identifier.trim(), accountTab, signup ? username : undefined);
+      setIsSignup(signup);
       setCooldown(60);
       setView("verify");
     } catch (error) {
@@ -167,6 +169,7 @@ function Auth({ go, onAuthenticated }: { go: (p: Page) => void; onAuthenticated:
       if(savedUsername && savedUsername.trim().toLowerCase()!==username.trim().toLowerCase()) throw new Error("نام کاربری با این حساب مطابقت ندارد.");
       const updatedProfiles=await updateUserProfile(session, username);
       if(!updatedProfiles[0]) throw new Error("پروفایل کاربر پیدا نشد.");
+      if(isSignup) await saveAssessment(session, answers, recommendation());
       const nextSession={...session,user:{...session.user,user_metadata:{...session.user.user_metadata,username:username.trim(),display_name:username.trim()}}};
       saveSession(nextSession);
       onAuthenticated(nextSession);
@@ -188,7 +191,7 @@ function Auth({ go, onAuthenticated }: { go: (p: Page) => void; onAuthenticated:
   </>;
   return <><Header go={go} simple/><main className="center-page auth-page">
     {view==="login"&&<div className="auth-card">{AccountForm({login:true})}</div>}
-    {view==="verify"&&<div className="auth-card"><button className="auth-switch" onClick={()=>setView("login")}>ویرایش اطلاعات</button><span className="eyebrow">کد تأیید ارسال شد</span><h2>کدت را وارد کن</h2><p>کد یک‌بارمصرف برای {identifier} ارسال شد.</p><label>کد تأیید<input value={otp} onChange={event=>setOtp(event.target.value)} dir="ltr" inputMode="numeric" maxLength={8} placeholder="--------"/></label><Button block onClick={confirmOtp} disabled={busy||otp.trim().length<8}>{busy?"در حال بررسی…":"تأیید و ورود"} <Icon name="arrow"/></Button>{message&&<p className="auth-message">{message}</p>}<button className="text-link resend" onClick={()=>submitOtp()} disabled={busy||cooldown>0}>{cooldown>0?`ارسال دوباره تا ${cooldown} ثانیه`:"ارسال دوباره کد"}</button></div>}
+    {view==="verify"&&<div className="auth-card"><button className="auth-switch" onClick={()=>setView("login")}>ویرایش اطلاعات</button><span className="eyebrow">کد تأیید ارسال شد</span><h2>کدت را وارد کن</h2><p>کد یک‌بارمصرف برای {identifier} ارسال شد.</p><label>کد تأیید<input value={otp} onChange={event=>setOtp(event.target.value)} dir="ltr" inputMode="numeric" maxLength={8} placeholder="--------"/></label><Button block onClick={confirmOtp} disabled={busy||otp.trim().length<8}>{busy?"در حال بررسی…":"تأیید و ورود"} <Icon name="arrow"/></Button>{message&&<p className="auth-message">{message}</p>}<button className="text-link resend" onClick={()=>submitOtp(isSignup)} disabled={busy||cooldown>0}>{cooldown>0?`ارسال دوباره تا ${cooldown} ثانیه`:"ارسال دوباره کد"}</button></div>}
     {view==="quiz"&&<div className="auth-card quiz-card">
       <div className="quiz-progress"><div><i style={{width:`${step/3*100}%`}}/></div><span>مرحله {step} از ۳</span></div>
       <span className="eyebrow">شناخت مسیر تو</span><h2>{questions[step-1].title}</h2><p>{questions[step-1].hint}</p>

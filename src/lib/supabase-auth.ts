@@ -95,6 +95,31 @@ function clearSession() {
   localStorage.removeItem("tarokh-auth-session");
 }
 
+export async function saveAssessment(session: AuthSession, answers: string[][], recommendedDimensions: string[]) {
+  const { anonKey } = requireConfig();
+  const dimensionNames: Record<string, string> = {
+    C: "confidence",
+    L: "listening",
+    E: "expression",
+    A: "awareness",
+    R: "rapport",
+  };
+  const response = await fetch(endpoint("/rest/v1/assessments"), {
+    method: "POST",
+    headers: {
+      apikey: anonKey,
+      Authorization: `Bearer ${session.access_token}`,
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({
+      user_id: session.user.id,
+      answers,
+      recommended_dimensions: recommendedDimensions.map(dimension => dimensionNames[dimension] || dimension.toLowerCase()),
+    }),
+  });
+  if (!response.ok) throw new Error("ذخیرهٔ ارزیابی انجام نشد.");
+}
+
 export async function updateUserProfile(session: AuthSession, username: string) {
   const { anonKey } = requireConfig();
   const response = await fetch(endpoint(`/rest/v1/profiles?id=eq.${encodeURIComponent(session.user.id)}`), {
