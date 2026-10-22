@@ -214,7 +214,7 @@ function Dashboard({ go, onLogout, displayName }: { go: (p: Page) => void; onLog
   const [showMe,setShowMe]=useState(true);
   const leaders=[["ش","شاهین آرام","۱۴"],["ک","کاوشگر شب","۱۲"],["م","مرد مسیر","۱۱"],["ذ","ذهن روشن","۱۰"],["س","سرو استوار","۹"],["ر","رهرو آرام","۹"],["ن","نقطه شروع","۸"],["پ","پلنگ صبور","۷"],["ق","قاب طلایی","۷"],["گ","گام بعدی","۶"]];
   return <><Header go={go} authenticated displayName={displayName} onLogout={onLogout}/><main className="app-page">
-    <div className="welcome"><div><span className="eyebrow">سلام، {displayName || "دوست کاریزما"}</span><h2>امروز یک قدم جلوتر برو.</h2></div><div className="level"><span>سطح فعلی</span><b>کاوشگر</b></div></div>
+    <div className="welcome"><div><span className="eyebrow">سلام، {displayName || "دوست کاریزما"}</span><h2>امروز یک قدم جلوتر برو.</h2></div><div className="level"><span>سطح فعلی:</span><b>کاوشگر</b></div></div>
     <div className="dashboard-grid">
       <section className="today-card"><span className="pill">تمرین امروز · ۱۰ دقیقه</span><h3>تماس چشمی قدرتمند</h3><p>در سه گفت‌وگوی امروز، تماس چشمی را یک ثانیه بیشتر حفظ کن.</p><div className="card-row"><Button onClick={() => go("lesson")}>شروع تمرین <Icon name="arrow"/></Button><div className="day-count"><b>۱۲</b><span>روز پیوسته</span></div></div></section>
       <section className="progress-card"><div className="ring"><div><b>۳۸٪</b><span>پیشرفت کل</span></div></div><div><span>مسیر یادگیری</span><h3>اعتماد‌به‌نفس</h3><p>۴ از ۱۵ درس کامل شده</p><div className="progress"><i/></div></div></section>
