@@ -101,6 +101,16 @@ export async function getActivePlan(session: AuthSession) {
   return entitlements[0]?.plans?.name || null;
 }
 
+export async function getLatestAssessment(session: AuthSession) {
+  const { anonKey } = requireConfig();
+  const response = await fetch(endpoint(`/rest/v1/assessments?user_id=eq.${encodeURIComponent(session.user.id)}&select=recommended_dimensions&order=created_at.desc&limit=1`), {
+    headers: { apikey: anonKey, Authorization: `Bearer ${session.access_token}` },
+  });
+  if (!response.ok) throw new Error("دریافت ارزیابی انجام نشد.");
+  const assessments = await response.json() as Array<{ recommended_dimensions: string[] }>;
+  return assessments[0]?.recommended_dimensions || [];
+}
+
 export async function deleteAccount(session: AuthSession) {
   const { anonKey } = requireConfig();
   const response = await fetch(endpoint("/rest/v1/rpc/delete_my_account"), {

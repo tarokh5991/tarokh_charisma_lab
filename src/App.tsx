@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { completeExercise, completeLesson, deleteAccount, getActivePlan, getLessonProgress, getPublishedLessons, getStoredSession, getUserProfile, requestOtp, restoreSession, saveAssessment, saveSession, signOut, updateUserProfile, verifyOtp, type AuthSession, type PublishedLesson, type UserProfile } from "./lib/supabase-auth";
+import { completeExercise, completeLesson, deleteAccount, getActivePlan, getLatestAssessment, getLessonProgress, getPublishedLessons, getStoredSession, getUserProfile, requestOtp, restoreSession, saveAssessment, saveSession, signOut, updateUserProfile, verifyOtp, type AuthSession, type PublishedLesson, type UserProfile } from "./lib/supabase-auth";
 
 type Page = "home" | "about" | "auth" | "dashboard" | "library" | "lesson" | "coach" | "pricing" | "checkout" | "profile";
 
@@ -238,11 +238,20 @@ function Dashboard({ go, onLogout, displayName, session, onOpenLesson }: { go: (
   const [completedIds,setCompletedIds]=useState<Set<string>>(new Set());
   const [streak,setStreak]=useState(0);
   const [history,setHistory]=useState<Array<{ title: string; type: string; at: string }>>([]);
+  const [recommendedDimensions,setRecommendedDimensions]=useState<string[]>([]);
+  const dimensions:Record<string,[string,string]>={
+    confidence:["اعتمادبه‌نفس","حضور آرام و مرزهای روشن را در خودت تقویت کن."],
+    listening:["گوش دادن","گفت‌وگو را با شنیدن دقیق پیش ببر."],
+    expression:["بیان","فکرت را کوتاه، روشن و اثرگذار بیان کن."],
+    awareness:["آگاهی اجتماعی","نشانه‌های رفتاری طرف مقابل را بهتر بخوان."],
+    rapport:["ایجاد ارتباط","شروع و ادامه‌دادن ارتباط را تمرین کن."],
+  };
   useEffect(()=>{
-    Promise.all([getPublishedLessons(),getLessonProgress(session)]).then(([published,progress])=>{
+    Promise.all([getPublishedLessons(),getLessonProgress(session),getLatestAssessment(session)]).then(([published,progress,recommendations])=>{
       setLessons(published);
       setCompletedIds(new Set(progress.filter(item=>item.completed_at).map(item=>item.lesson_id)));
       setStreak(learningStreak(progress.flatMap(item=>[item.completed_at,item.exercise_completed_at])));
+      setRecommendedDimensions(recommendations);
       setHistory(progress.flatMap(item=>{
         const lesson=published.find(candidate=>candidate.id===item.lesson_id);
         if(!lesson) return [];
@@ -264,6 +273,7 @@ function Dashboard({ go, onLogout, displayName, session, onOpenLesson }: { go: (
       <section className="today-card"><span className="pill">{nextLesson?`درس بعدی · ${nextLesson.duration_minutes} دقیقه`:"مسیر را کامل کردی"}</span><h3>{nextLesson?.title || "همهٔ درس‌ها تکمیل شدند"}</h3><p>{nextLesson?.summary || "برای مرور نکته‌ها و تمرین‌ها به کتابخانه برگرد."}</p><div className="card-row"><Button onClick={() => nextLesson?onOpenLesson(nextLesson):go("library")}>{nextLesson?"شروع مطالعه":"مشاهده درس‌ها"} <Icon name="arrow"/></Button><div className="day-count"><b>{streak}</b><span>روز پیوسته</span></div></div></section>
       <section className="progress-card"><div className="ring" style={{background:`conic-gradient(var(--gold) ${percentage}%,#292824 0)`}}><div><b>{percentage}٪</b><span>پیشرفت کل</span></div></div><div><span>مسیر یادگیری</span><h3>{nextLesson?.course_modules.learning_paths.title || "CLEAR"}</h3><p>{completedCount} از {lessons.length} درس کامل شده</p><div className="progress"><i style={{width:`${percentage}%`}}/></div></div></section>
     </div>
+    {recommendedDimensions.length>0&&<section className="recommended-focus"><span className="eyebrow">بر اساس ارزیابی اولیه</span><h3>تمرکز مسیر تو</h3><p>دو مهارتی که بیشترین اثر را در شروع مسیرت دارند.</p><div>{recommendedDimensions.slice(0,2).filter(dimension=>dimensions[dimension]).map(dimension=><article key={dimension}><b>{dimensions[dimension][0]}</b><span>{dimensions[dimension][1]}</span></article>)}</div></section>}
     <div className="section-head"><h3>ادامه مسیر</h3><button onClick={() => go("library")}>مشاهده همه</button></div>
     {nextLesson?<div className="lesson-row"><span>{String(lessons.indexOf(nextLesson)+1).padStart(2,"0")}</span><div><small>{nextLesson.course_modules.learning_paths.title}</small><h3>{nextLesson.title}</h3><p>{nextLesson.summary}</p></div><Button onClick={() => onOpenLesson(nextLesson)} ghost><Icon name="play"/> ادامه درس</Button></div>:<p className="library-state">همهٔ درس‌های موجود را تکمیل کرده‌ای.</p>}
     <section className="learning-history"><div className="section-head"><h3>تاریخچهٔ یادگیری</h3></div>{history.length?<div>{history.slice(0,5).map(activity=><div className="history-row" key={`${activity.type}-${activity.at}`}><div><strong>{activity.type}</strong><span>{activity.title}</span></div><time>{new Intl.DateTimeFormat("fa-IR",{month:"long",day:"numeric"}).format(new Date(activity.at))}</time></div>)}</div>:<p>هنوز فعالیتی ثبت نشده است.</p>}</section>
