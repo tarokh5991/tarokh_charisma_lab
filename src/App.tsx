@@ -1,7 +1,14 @@
 import { useEffect, useState } from "react";
-import { completeLesson, getLessonProgress, getPublishedLessons, getStoredSession, getUserProfile, requestOtp, restoreSession, saveAssessment, saveSession, signOut, updateUserProfile, verifyOtp, type AuthSession, type PublishedLesson, type UserProfile } from "./lib/supabase-auth";
+import { completeLesson, getActivePlan, getLessonProgress, getPublishedLessons, getStoredSession, getUserProfile, requestOtp, restoreSession, saveAssessment, saveSession, signOut, updateUserProfile, verifyOtp, type AuthSession, type PublishedLesson, type UserProfile } from "./lib/supabase-auth";
 
 type Page = "home" | "about" | "auth" | "dashboard" | "library" | "lesson" | "coach" | "pricing" | "checkout" | "profile";
+
+const pages: Page[] = ["home", "about", "auth", "dashboard", "library", "lesson", "coach", "pricing", "checkout", "profile"];
+
+function pageFromHash() {
+  const page = window.location.hash.slice(1) as Page;
+  return pages.includes(page) ? page : null;
+}
 
 const Icon = ({ name }: { name: string }) => {
   const paths: Record<string, React.ReactNode> = {
@@ -251,7 +258,7 @@ function Library({ go, onOpenLesson, ...auth }: { go: (p: Page) => void; onOpenL
   </main><BottomNav page="library" go={go}/></>;
 }
 
-function Profile({ go, session, profile, onUpdateUsername, ...auth }: { go: (p: Page) => void; session: AuthSession; profile: UserProfile | null; onUpdateUsername: (username: string) => Promise<void> } & HeaderProps) {
+function Profile({ go, session, profile, activePlan, onUpdateUsername, ...auth }: { go: (p: Page) => void; session: AuthSession; profile: UserProfile | null; activePlan: string | null; onUpdateUsername: (username: string) => Promise<void> } & HeaderProps) {
   const roleLabels={learner:"یادگیرنده",mentor:"منتور",admin:"مدیر"};
   const contact=session.user.email || session.user.phone || "ثبت نشده";
   const displayName=profile?.username || profile?.display_name || session.user.user_metadata?.username || "ثبت نشده";
@@ -273,7 +280,7 @@ function Profile({ go, session, profile, onUpdateUsername, ...auth }: { go: (p: 
   return <><Header go={go} {...auth}/><main className="app-page profile-page">
     <button className="back" onClick={()=>go("dashboard")}><Icon name="arrow"/> بازگشت به داشبورد</button>
     <div className="profile-heading"><span className="eyebrow">حساب کاربری</span><h1>پروفایل من</h1><p>اطلاعات حساب و وضعیت عضویت تو</p></div>
-    <section className="profile-card"><div className="profile-avatar">{displayName.slice(0,1)}</div><div className="profile-details"><div className="username-field"><span>نام کاربری</span>{editing?<div className="username-editor"><input value={username} onChange={event=>setUsername(event.target.value)} dir="auto" autoComplete="username" aria-label="نام کاربری"/><Button onClick={saveUsername} disabled={saving||!username.trim()}>{saving?"در حال ذخیره…":"ذخیره"}</Button><button className="cancel-edit" onClick={()=>{setEditing(false);setUsername(displayName);setMessage("")}}>انصراف</button></div>:<div className="username-value"><strong>{displayName}</strong><button className="edit-username" aria-label="ویرایش نام کاربری" onClick={()=>{setUsername(displayName==="ثبت نشده"?"":displayName);setEditing(true);setMessage("")}}><Icon name="edit"/></button></div>}{message&&<small className="profile-message">{message}</small>}</div><div><span>ایمیل یا شماره موبایل</span><strong dir="ltr">{contact}</strong></div><div><span>نقش حساب</span><strong>{roleLabels[profile?.role || "learner"]}</strong></div><div><span>وضعیت نشست</span><strong className="profile-status">فعال</strong></div></div></section>
+    <section className="profile-card"><div className="profile-avatar">{displayName.slice(0,1)}</div><div className="profile-details"><div className="username-field"><span>نام کاربری</span>{editing?<div className="username-editor"><input value={username} onChange={event=>setUsername(event.target.value)} dir="auto" autoComplete="username" aria-label="نام کاربری"/><Button onClick={saveUsername} disabled={saving||!username.trim()}>{saving?"در حال ذخیره…":"ذخیره"}</Button><button className="cancel-edit" onClick={()=>{setEditing(false);setUsername(displayName);setMessage("")}}>انصراف</button></div>:<div className="username-value"><strong>{displayName}</strong><button className="edit-username" aria-label="ویرایش نام کاربری" onClick={()=>{setUsername(displayName==="ثبت نشده"?"":displayName);setEditing(true);setMessage("")}}><Icon name="edit"/></button></div>}{message&&<small className="profile-message">{message}</small>}</div><div><span>ایمیل یا شماره موبایل</span><strong dir="ltr">{contact}</strong></div><div><span>نقش حساب</span><strong>{roleLabels[profile?.role || "learner"]}</strong></div><div><span>پلن فعال</span><strong>{activePlan || "بدون پلن فعال"}</strong></div><div><span>وضعیت نشست</span><strong className="profile-status">فعال</strong></div></div></section>
   </main><BottomNav page="profile" go={go}/></>;
 }
 
@@ -362,8 +369,9 @@ function Checkout({ go, plan, ...auth }: { go:(p:Page)=>void; plan:string } & He
 export default function App() {
   const [session,setSession]=useState<AuthSession|null>(()=>getStoredSession());
   const [profile,setProfile]=useState<UserProfile|null>(null);
-  const [page,setPage]=useState<Page>(()=>getStoredSession()?"dashboard":"home");
+  const [page,setPage]=useState<Page>(()=>pageFromHash() || (getStoredSession()?"dashboard":"home"));
   const [activeLesson,setActiveLesson]=useState<PublishedLesson|null>(null);
+  const [activePlan,setActivePlan]=useState<string|null>(null);
   const [plan,setPlan]=useState("طلا");
   const protectedPages:Page[]=["dashboard","library","lesson","coach","checkout","profile"];
   useEffect(()=>{
@@ -371,8 +379,11 @@ export default function App() {
     restoreSession().then(async restored=>{
       if(!active) return;
       setSession(restored);
-      if(restored) setProfile(await getUserProfile(restored).catch(()=>null));
-      if(!restored && page!=="home" && page!=="about" && page!=="pricing") setPage("home");
+      if(restored) {
+        setProfile(await getUserProfile(restored).catch(()=>null));
+        setActivePlan(await getActivePlan(restored).catch(()=>null));
+      }
+      if(!restored && page!=="home" && page!=="about" && page!=="pricing") { setPage("home"); window.location.hash="home"; }
     });
     return ()=>{active=false};
   },[]);
@@ -381,17 +392,31 @@ export default function App() {
       if(event.key!=="tarokh-auth-session") return;
       const nextSession=getStoredSession();
       setSession(nextSession);
-      if(nextSession) getUserProfile(nextSession).then(setProfile).catch(()=>setProfile(null));
-      else { setProfile(null); setPage("home"); }
+      if(nextSession) {
+        getUserProfile(nextSession).then(setProfile).catch(()=>setProfile(null));
+        getActivePlan(nextSession).then(setActivePlan).catch(()=>setActivePlan(null));
+      } else { setProfile(null); setActivePlan(null); setPage("home"); window.location.hash="home"; }
     };
     window.addEventListener("storage",syncSession);
     return ()=>window.removeEventListener("storage",syncSession);
   },[]);
+  useEffect(()=>{
+    const syncHash=()=>{
+      const nextPage=pageFromHash() || "home";
+      if(protectedPages.includes(nextPage) && !getStoredSession()) { window.location.hash="auth"; return; }
+      setPage(nextPage);
+      window.scrollTo({top:0,behavior:"smooth"});
+    };
+    window.addEventListener("hashchange",syncHash);
+    return ()=>window.removeEventListener("hashchange",syncHash);
+  },[]);
   const go=(nextPage:Page)=>{
     if(protectedPages.includes(nextPage) && !session && !getStoredSession()){
+      window.location.hash="auth";
       setPage("auth");
       return;
     }
+    window.location.hash=nextPage;
     setPage(nextPage);
     window.scrollTo({top:0,behavior:"smooth"});
   };
@@ -402,6 +427,7 @@ export default function App() {
   const authenticated=(nextSession:AuthSession)=>{
     setSession(nextSession);
     getUserProfile(nextSession).then(setProfile).catch(()=>setProfile(null));
+    getActivePlan(nextSession).then(setActivePlan).catch(()=>setActivePlan(null));
   };
   const updateUsername=async(username:string)=>{
     if(!session) return;
@@ -415,10 +441,11 @@ export default function App() {
     await signOut(session);
     setSession(null);
     setProfile(null);
+    setActivePlan(null);
     go("home");
   };
   const displayName=profile?.username || profile?.display_name || session?.user.user_metadata?.username || session?.user.user_metadata?.display_name;
   const visiblePage=!session && protectedPages.includes(page)?"auth":page;
   const headerAuth={authenticated:Boolean(session),displayName,onLogout:logout};
-  return <div dir="rtl">{visiblePage==="home"?<Home go={go} {...headerAuth}/>:visiblePage==="about"?<About go={go} {...headerAuth}/>:visiblePage==="auth"?<Auth go={go} onAuthenticated={authenticated}/>:visiblePage==="dashboard"?<Dashboard go={go} displayName={displayName} onLogout={logout}/>:visiblePage==="library"?<Library go={go} onOpenLesson={openLesson} {...headerAuth}/>:visiblePage==="profile"?<Profile go={go} session={session!} profile={profile} onUpdateUsername={updateUsername} {...headerAuth}/>:visiblePage==="lesson"?<Lesson go={go} lesson={activeLesson} session={session!} {...headerAuth}/>:visiblePage==="coach"?<Coach go={go} {...headerAuth}/>:visiblePage==="pricing"?<Pricing go={go} choose={setPlan} {...headerAuth}/>:<Checkout go={go} plan={plan} {...headerAuth}/>}<SupportWidget showButton={visiblePage==="home"||visiblePage==="dashboard"}/></div>;
+  return <div dir="rtl">{visiblePage==="home"?<Home go={go} {...headerAuth}/>:visiblePage==="about"?<About go={go} {...headerAuth}/>:visiblePage==="auth"?<Auth go={go} onAuthenticated={authenticated}/>:visiblePage==="dashboard"?<Dashboard go={go} displayName={displayName} onLogout={logout}/>:visiblePage==="library"?<Library go={go} onOpenLesson={openLesson} {...headerAuth}/>:visiblePage==="profile"?<Profile go={go} session={session!} profile={profile} activePlan={activePlan} onUpdateUsername={updateUsername} {...headerAuth}/>:visiblePage==="lesson"?<Lesson go={go} lesson={activeLesson} session={session!} {...headerAuth}/>:visiblePage==="coach"?<Coach go={go} {...headerAuth}/>:visiblePage==="pricing"?<Pricing go={go} choose={setPlan} {...headerAuth}/>:<Checkout go={go} plan={plan} {...headerAuth}/>}<SupportWidget showButton={visiblePage==="home"||visiblePage==="dashboard"}/></div>;
 }

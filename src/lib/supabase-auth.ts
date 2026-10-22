@@ -91,6 +91,16 @@ export async function getUserProfile(session: AuthSession) {
   return profiles[0] || null;
 }
 
+export async function getActivePlan(session: AuthSession) {
+  const { anonKey } = requireConfig();
+  const response = await fetch(endpoint(`/rest/v1/entitlements?user_id=eq.${encodeURIComponent(session.user.id)}&status=eq.active&select=plans(name)&order=starts_at.desc&limit=1`), {
+    headers: { apikey: anonKey, Authorization: `Bearer ${session.access_token}` },
+  });
+  if (!response.ok) throw new Error("دریافت پلن فعال انجام نشد.");
+  const entitlements = await response.json() as Array<{ plans: { name: string } | null }>;
+  return entitlements[0]?.plans?.name || null;
+}
+
 export type PublishedLesson = {
   id: string;
   slug: string;
