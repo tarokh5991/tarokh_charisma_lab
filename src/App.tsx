@@ -167,13 +167,18 @@ function Auth({ go, onAuthenticated }: { go: (p: Page) => void; onAuthenticated:
       const session=await verifyOtp(identifier.trim(), otp.trim(), accountTab);
       const savedUsername=session.user.user_metadata?.username || session.user.user_metadata?.display_name;
       if(savedUsername && savedUsername.trim().toLowerCase()!==username.trim().toLowerCase()) throw new Error("نام کاربری با این حساب مطابقت ندارد.");
-      const updatedProfiles=await updateUserProfile(session, username);
-      if(!updatedProfiles[0]) throw new Error("پروفایل کاربر پیدا نشد.");
-      if(isSignup) await saveAssessment(session, answers, recommendation());
       const nextSession={...session,user:{...session.user,user_metadata:{...session.user.user_metadata,username:username.trim(),display_name:username.trim()}}};
       saveSession(nextSession);
       onAuthenticated(nextSession);
       go("dashboard");
+      void (async()=>{
+        try {
+          await updateUserProfile(session, username);
+          if(isSignup) await saveAssessment(session, answers, recommendation());
+        } catch {
+          // Authentication is complete even if optional profile data cannot be stored yet.
+        }
+      })();
     } catch (error) {
       setMessage(error instanceof Error ? error.message : "کد واردشده معتبر نیست.");
     } finally { setBusy(false); }
