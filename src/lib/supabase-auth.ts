@@ -96,6 +96,15 @@ export type PublishedLesson = {
   slug: string;
   title: string;
   summary: string;
+  body: {
+    quote: string;
+    goal: string;
+    idea: string[];
+    example: string;
+    exercise: { title: string; steps: string[] };
+    mistake: string;
+    summary: string[];
+  };
   duration_minutes: number;
   position: number;
   course_modules: {
@@ -106,7 +115,7 @@ export type PublishedLesson = {
 
 export async function getPublishedLessons() {
   const { anonKey } = requireConfig();
-  const response = await fetch(endpoint("/rest/v1/lessons?select=id,slug,title,summary,duration_minutes,position,course_modules!inner(title,learning_paths!inner(title,position))&is_published=eq.true"), {
+  const response = await fetch(endpoint("/rest/v1/lessons?select=id,slug,title,summary,body,duration_minutes,position,course_modules!inner(title,learning_paths!inner(title,position))&is_published=eq.true"), {
     headers: { apikey: anonKey },
   });
   if (!response.ok) throw new Error("دریافت درس‌ها انجام نشد.");

@@ -230,7 +230,7 @@ function Dashboard({ go, onLogout, displayName }: { go: (p: Page) => void; onLog
   </main><BottomNav page="dashboard" go={go}/></>;
 }
 
-function Library({ go, ...auth }: { go: (p: Page) => void } & HeaderProps) {
+function Library({ go, onOpenLesson, ...auth }: { go: (p: Page) => void; onOpenLesson: (lesson: PublishedLesson) => void } & HeaderProps) {
   const [lessons,setLessons]=useState<PublishedLesson[]>([]);
   const [loading,setLoading]=useState(true);
   const [message,setMessage]=useState("");
@@ -247,7 +247,7 @@ function Library({ go, ...auth }: { go: (p: Page) => void } & HeaderProps) {
   },[]);
   return <><Header go={go} {...auth}/><main className="app-page library-page">
     <div className="library-heading"><span className="eyebrow">آکادمی کاریزما</span><h1>مسیرهای یادگیری</h1><p>پنج درس آغازین CLEAR را با تمرین‌های واقعی دنبال کن.</p></div>
-    {loading?<p className="library-state">در حال دریافت درس‌ها…</p>:message?<p className="library-state library-error">{message}</p>:<div className="lesson-library">{lessons.map((lesson,index)=><article key={lesson.id} className="lesson-library-card"><span className="lesson-number">{String(index+1).padStart(2,"0")}</span><div><small>{lesson.course_modules.learning_paths.title} · {lesson.duration_minutes} دقیقه</small><h2>{lesson.title}</h2><p>{lesson.summary}</p><span className="lesson-available">درس متنی آمادهٔ مطالعه</span></div></article>)}</div>}
+    {loading?<p className="library-state">در حال دریافت درس‌ها…</p>:message?<p className="library-state library-error">{message}</p>:<div className="lesson-library">{lessons.map((lesson,index)=><article key={lesson.id} className="lesson-library-card"><span className="lesson-number">{String(index+1).padStart(2,"0")}</span><div><small>{lesson.course_modules.learning_paths.title} · {lesson.duration_minutes} دقیقه</small><h2>{lesson.title}</h2><p>{lesson.summary}</p><button className="lesson-available" onClick={()=>onOpenLesson(lesson)}>مطالعهٔ درس متنی <Icon name="arrow"/></button></div></article>)}</div>}
   </main><BottomNav page="library" go={go}/></>;
 }
 
@@ -277,13 +277,12 @@ function Profile({ go, session, profile, onUpdateUsername, ...auth }: { go: (p: 
   </main><BottomNav page="profile" go={go}/></>;
 }
 
-function Lesson({ go, ...auth }: { go: (p: Page) => void } & HeaderProps) {
-  return <><Header go={go} {...auth}/><main className="app-page lesson-page">
-    <button className="back" onClick={() => go("dashboard")}><Icon name="arrow"/> بازگشت به مسیر</button>
-    <div className="video"><div className="play"><Icon name="play"/></div><div><span>درس پنجم</span><b>۰۸:۴۲</b></div></div>
-    <div className="lesson-content"><article><span className="eyebrow">فصل اول · اعتماد‌به‌نفس</span><h2>صدایی که شنیده می‌شود</h2><p>صدای مطمئن، بلندترین صدا نیست. صدایی‌ست که ریتم دارد، مکث را می‌شناسد و برای شنیده‌شدن عجله نمی‌کند.</p><div className="quote">«مکث، نشانه تردید نیست؛ نشانه کنترل است.»</div></article>
-      <aside><span className="pill">تمرین این هفته</span><h3>تمرین مکث سه‌ثانیه‌ای</h3><p>یک دقیقه درباره روزت صحبت کن. قبل از هر نکته مهم، سه ثانیه مکث کن و صدایت را ضبط کن.</p><label className="check"><input type="checkbox"/> تمرین را انجام دادم</label><Button block onClick={() => go("coach")}>تمرین با مربی هوش مصنوعی</Button></aside>
-    </div>
+function Lesson({ go, lesson, ...auth }: { go: (p: Page) => void; lesson: PublishedLesson | null } & HeaderProps) {
+  if(!lesson) return <><Header go={go} {...auth}/><main className="app-page lesson-page"><button className="back" onClick={() => go("library")}><Icon name="arrow"/> بازگشت به کتابخانه</button><p className="library-state">برای مطالعه، یک درس را از کتابخانه انتخاب کن.</p></main><BottomNav page="lesson" go={go}/></>;
+  const { body }=lesson;
+  return <><Header go={go} {...auth}/><main className="app-page lesson-page text-lesson-page">
+    <button className="back" onClick={() => go("library")}><Icon name="arrow"/> بازگشت به کتابخانه</button>
+    <article className="text-lesson"><span className="eyebrow">{lesson.course_modules.learning_paths.title} · {lesson.duration_minutes} دقیقه مطالعه</span><h1>{lesson.title}</h1><p className="lesson-lead">{lesson.summary}</p><div className="quote">«{body.quote}»</div><section><h2>هدف درس</h2><p>{body.goal}</p></section><section><h2>ایدهٔ اصلی</h2>{body.idea.map(item=><p key={item}>{item}</p>)}</section><section><h2>مثال</h2><p>{body.example}</p></section><section><h2>{body.exercise.title}</h2><ol>{body.exercise.steps.map(step=><li key={step}>{step}</li>)}</ol></section><section><h2>نکتهٔ مهم</h2><p>{body.mistake}</p></section><section><h2>خلاصه</h2><ul>{body.summary.map(item=><li key={item}>{item}</li>)}</ul></section></article>
   </main><BottomNav page="lesson" go={go}/></>;
 }
 
@@ -353,6 +352,7 @@ export default function App() {
   const [session,setSession]=useState<AuthSession|null>(()=>getStoredSession());
   const [profile,setProfile]=useState<UserProfile|null>(null);
   const [page,setPage]=useState<Page>(()=>getStoredSession()?"dashboard":"home");
+  const [activeLesson,setActiveLesson]=useState<PublishedLesson|null>(null);
   const [plan,setPlan]=useState("طلا");
   const protectedPages:Page[]=["dashboard","library","lesson","coach","checkout","profile"];
   useEffect(()=>{
@@ -384,6 +384,10 @@ export default function App() {
     setPage(nextPage);
     window.scrollTo({top:0,behavior:"smooth"});
   };
+  const openLesson=(lesson:PublishedLesson)=>{
+    setActiveLesson(lesson);
+    go("lesson");
+  };
   const authenticated=(nextSession:AuthSession)=>{
     setSession(nextSession);
     getUserProfile(nextSession).then(setProfile).catch(()=>setProfile(null));
@@ -405,5 +409,5 @@ export default function App() {
   const displayName=profile?.username || profile?.display_name || session?.user.user_metadata?.username || session?.user.user_metadata?.display_name;
   const visiblePage=!session && protectedPages.includes(page)?"auth":page;
   const headerAuth={authenticated:Boolean(session),displayName,onLogout:logout};
-  return <div dir="rtl">{visiblePage==="home"?<Home go={go} {...headerAuth}/>:visiblePage==="about"?<About go={go} {...headerAuth}/>:visiblePage==="auth"?<Auth go={go} onAuthenticated={authenticated}/>:visiblePage==="dashboard"?<Dashboard go={go} displayName={displayName} onLogout={logout}/>:visiblePage==="library"?<Library go={go} {...headerAuth}/>:visiblePage==="profile"?<Profile go={go} session={session!} profile={profile} onUpdateUsername={updateUsername} {...headerAuth}/>:visiblePage==="lesson"?<Lesson go={go} {...headerAuth}/>:visiblePage==="coach"?<Coach go={go} {...headerAuth}/>:visiblePage==="pricing"?<Pricing go={go} choose={setPlan} {...headerAuth}/>:<Checkout go={go} plan={plan} {...headerAuth}/>}<SupportWidget showButton={visiblePage==="home"||visiblePage==="dashboard"}/></div>;
+  return <div dir="rtl">{visiblePage==="home"?<Home go={go} {...headerAuth}/>:visiblePage==="about"?<About go={go} {...headerAuth}/>:visiblePage==="auth"?<Auth go={go} onAuthenticated={authenticated}/>:visiblePage==="dashboard"?<Dashboard go={go} displayName={displayName} onLogout={logout}/>:visiblePage==="library"?<Library go={go} onOpenLesson={openLesson} {...headerAuth}/>:visiblePage==="profile"?<Profile go={go} session={session!} profile={profile} onUpdateUsername={updateUsername} {...headerAuth}/>:visiblePage==="lesson"?<Lesson go={go} lesson={activeLesson} {...headerAuth}/>:visiblePage==="coach"?<Coach go={go} {...headerAuth}/>:visiblePage==="pricing"?<Pricing go={go} choose={setPlan} {...headerAuth}/>:<Checkout go={go} plan={plan} {...headerAuth}/>}<SupportWidget showButton={visiblePage==="home"||visiblePage==="dashboard"}/></div>;
 }
