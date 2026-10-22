@@ -10,6 +10,21 @@ function pageFromHash() {
   return pages.includes(page) ? page : null;
 }
 
+function learningStreak(dates: Array<string | null>) {
+  const activeDays = new Set(dates.filter((date): date is string => Boolean(date)).map(date => {
+    const value = new Date(date);
+    return `${value.getFullYear()}-${value.getMonth()}-${value.getDate()}`;
+  }));
+  let streak = 0;
+  const cursor = new Date();
+  cursor.setHours(0,0,0,0);
+  while(activeDays.has(`${cursor.getFullYear()}-${cursor.getMonth()}-${cursor.getDate()}`)) {
+    streak += 1;
+    cursor.setDate(cursor.getDate()-1);
+  }
+  return streak;
+}
+
 const Icon = ({ name }: { name: string }) => {
   const paths: Record<string, React.ReactNode> = {
     arrow: <path d="m15 18-6-6 6-6" />,
@@ -221,10 +236,12 @@ function Dashboard({ go, onLogout, displayName, session, onOpenLesson }: { go: (
   const [showMe,setShowMe]=useState(true);
   const [lessons,setLessons]=useState<PublishedLesson[]>([]);
   const [completedIds,setCompletedIds]=useState<Set<string>>(new Set());
+  const [streak,setStreak]=useState(0);
   useEffect(()=>{
     Promise.all([getPublishedLessons(),getLessonProgress(session)]).then(([published,progress])=>{
       setLessons(published);
       setCompletedIds(new Set(progress.filter(item=>item.completed_at).map(item=>item.lesson_id)));
+      setStreak(learningStreak(progress.flatMap(item=>[item.completed_at,item.exercise_completed_at])));
     }).catch(()=>{});
   },[session]);
   const completedCount=completedIds.size;
@@ -235,7 +252,7 @@ function Dashboard({ go, onLogout, displayName, session, onOpenLesson }: { go: (
   return <><Header go={go} authenticated displayName={displayName} onLogout={onLogout}/><main className="app-page">
     <div className="welcome"><div><span className="eyebrow">سلام، {displayName || "دوست کاریزما"}</span><h2>امروز یک قدم جلوتر برو.</h2></div><div className="level"><span>سطح فعلی:</span><b>کاوشگر</b></div></div>
     <div className="dashboard-grid">
-      <section className="today-card"><span className="pill">{nextLesson?`درس بعدی · ${nextLesson.duration_minutes} دقیقه`:"مسیر را کامل کردی"}</span><h3>{nextLesson?.title || "همهٔ درس‌ها تکمیل شدند"}</h3><p>{nextLesson?.summary || "برای مرور نکته‌ها و تمرین‌ها به کتابخانه برگرد."}</p><div className="card-row"><Button onClick={() => nextLesson?onOpenLesson(nextLesson):go("library")}>{nextLesson?"شروع مطالعه":"مشاهده درس‌ها"} <Icon name="arrow"/></Button><div className="day-count"><b>{completedCount}</b><span>درس تکمیل‌شده</span></div></div></section>
+      <section className="today-card"><span className="pill">{nextLesson?`درس بعدی · ${nextLesson.duration_minutes} دقیقه`:"مسیر را کامل کردی"}</span><h3>{nextLesson?.title || "همهٔ درس‌ها تکمیل شدند"}</h3><p>{nextLesson?.summary || "برای مرور نکته‌ها و تمرین‌ها به کتابخانه برگرد."}</p><div className="card-row"><Button onClick={() => nextLesson?onOpenLesson(nextLesson):go("library")}>{nextLesson?"شروع مطالعه":"مشاهده درس‌ها"} <Icon name="arrow"/></Button><div className="day-count"><b>{streak}</b><span>روز پیوسته</span></div></div></section>
       <section className="progress-card"><div className="ring" style={{background:`conic-gradient(var(--gold) ${percentage}%,#292824 0)`}}><div><b>{percentage}٪</b><span>پیشرفت کل</span></div></div><div><span>مسیر یادگیری</span><h3>{nextLesson?.course_modules.learning_paths.title || "CLEAR"}</h3><p>{completedCount} از {lessons.length} درس کامل شده</p><div className="progress"><i style={{width:`${percentage}%`}}/></div></div></section>
     </div>
     <div className="section-head"><h3>ادامه مسیر</h3><button onClick={() => go("library")}>مشاهده همه</button></div>
