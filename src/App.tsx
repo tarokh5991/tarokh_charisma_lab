@@ -237,11 +237,20 @@ function Dashboard({ go, onLogout, displayName, session, onOpenLesson }: { go: (
   const [lessons,setLessons]=useState<PublishedLesson[]>([]);
   const [completedIds,setCompletedIds]=useState<Set<string>>(new Set());
   const [streak,setStreak]=useState(0);
+  const [history,setHistory]=useState<Array<{ title: string; type: string; at: string }>>([]);
   useEffect(()=>{
     Promise.all([getPublishedLessons(),getLessonProgress(session)]).then(([published,progress])=>{
       setLessons(published);
       setCompletedIds(new Set(progress.filter(item=>item.completed_at).map(item=>item.lesson_id)));
       setStreak(learningStreak(progress.flatMap(item=>[item.completed_at,item.exercise_completed_at])));
+      setHistory(progress.flatMap(item=>{
+        const lesson=published.find(candidate=>candidate.id===item.lesson_id);
+        if(!lesson) return [];
+        return [
+          ...(item.completed_at?[{title:lesson.title,type:"مطالعهٔ درس",at:item.completed_at}]:[]),
+          ...(item.exercise_completed_at?[{title:lesson.title,type:"انجام تمرین",at:item.exercise_completed_at}]:[]),
+        ];
+      }).sort((first,second)=>new Date(second.at).getTime()-new Date(first.at).getTime()));
     }).catch(()=>{});
   },[session]);
   const completedCount=completedIds.size;
@@ -257,6 +266,7 @@ function Dashboard({ go, onLogout, displayName, session, onOpenLesson }: { go: (
     </div>
     <div className="section-head"><h3>ادامه مسیر</h3><button onClick={() => go("library")}>مشاهده همه</button></div>
     {nextLesson?<div className="lesson-row"><span>{String(lessons.indexOf(nextLesson)+1).padStart(2,"0")}</span><div><small>{nextLesson.course_modules.learning_paths.title}</small><h3>{nextLesson.title}</h3><p>{nextLesson.summary}</p></div><Button onClick={() => onOpenLesson(nextLesson)} ghost><Icon name="play"/> ادامه درس</Button></div>:<p className="library-state">همهٔ درس‌های موجود را تکمیل کرده‌ای.</p>}
+    <section className="learning-history"><div className="section-head"><h3>تاریخچهٔ یادگیری</h3></div>{history.length?<div>{history.slice(0,5).map(activity=><div className="history-row" key={`${activity.type}-${activity.at}`}><div><strong>{activity.type}</strong><span>{activity.title}</span></div><time>{new Intl.DateTimeFormat("fa-IR",{month:"long",day:"numeric"}).format(new Date(activity.at))}</time></div>)}</div>:<p>هنوز فعالیتی ثبت نشده است.</p>}</section>
     <section className="leaderboard"><div className="leader-head"><div><span className="eyebrow">تمرین‌های انجام‌شده در هفته</span><h3>برترین‌های این هفته</h3></div><button className={`privacy-toggle ${showMe?"on":""}`} role="switch" aria-checked={showMe} onClick={()=>setShowMe(!showMe)}><i/><span>نمایش من در جدول</span></button></div>
       <div className="leader-list">{leaders.slice(0,showLeaders?10:3).map(([initial,name,count],index)=><div className="leader-row" key={name}><b className="rank">{index+1}</b><span className="leader-avatar">{initial}</span><strong>{name}</strong><span className="practice-count"><b>{count}</b> تمرین</span></div>)}</div>
       <button className="show-leaders" onClick={()=>setShowLeaders(!showLeaders)}>{showLeaders?"نمایش سه نفر اول":"مشاهده‌ی همه"}</button>
