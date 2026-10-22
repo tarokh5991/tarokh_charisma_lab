@@ -340,7 +340,7 @@ export default function App() {
     return ()=>window.removeEventListener("storage",syncSession);
   },[]);
   const go=(nextPage:Page)=>{
-    if(protectedPages.includes(nextPage) && !session){
+    if(protectedPages.includes(nextPage) && !session && !getStoredSession()){
       setPage("auth");
       return;
     }
