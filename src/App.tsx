@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { getPublishedLessons, getStoredSession, getUserProfile, requestOtp, restoreSession, saveAssessment, saveSession, signOut, updateUserProfile, verifyOtp, type AuthSession, type PublishedLesson, type UserProfile } from "./lib/supabase-auth";
+import { completeLesson, getLessonProgress, getPublishedLessons, getStoredSession, getUserProfile, requestOtp, restoreSession, saveAssessment, saveSession, signOut, updateUserProfile, verifyOtp, type AuthSession, type PublishedLesson, type UserProfile } from "./lib/supabase-auth";
 
 type Page = "home" | "about" | "auth" | "dashboard" | "library" | "lesson" | "coach" | "pricing" | "checkout" | "profile";
 
@@ -277,12 +277,23 @@ function Profile({ go, session, profile, onUpdateUsername, ...auth }: { go: (p: 
   </main><BottomNav page="profile" go={go}/></>;
 }
 
-function Lesson({ go, lesson, ...auth }: { go: (p: Page) => void; lesson: PublishedLesson | null } & HeaderProps) {
+function Lesson({ go, lesson, session, ...auth }: { go: (p: Page) => void; lesson: PublishedLesson | null; session: AuthSession } & HeaderProps) {
+  const [completed,setCompleted]=useState(false);
+  const [saving,setSaving]=useState(false);
+  const [message,setMessage]=useState("");
+  useEffect(()=>{
+    if(!lesson) return;
+    getLessonProgress(session).then(progress=>setCompleted(progress.some(item=>item.lesson_id===lesson.id&&item.completed_at))).catch(()=>{});
+  },[lesson,session]);
   if(!lesson) return <><Header go={go} {...auth}/><main className="app-page lesson-page"><button className="back" onClick={() => go("library")}><Icon name="arrow"/> بازگشت به کتابخانه</button><p className="library-state">برای مطالعه، یک درس را از کتابخانه انتخاب کن.</p></main><BottomNav page="lesson" go={go}/></>;
   const { body }=lesson;
+  const markCompleted=async()=>{
+    setSaving(true); setMessage("");
+    try { await completeLesson(session,lesson.id); setCompleted(true); } catch(error) { setMessage(error instanceof Error ? error.message : "ثبت تکمیل مطالعه انجام نشد."); } finally { setSaving(false); }
+  };
   return <><Header go={go} {...auth}/><main className="app-page lesson-page text-lesson-page">
     <button className="back" onClick={() => go("library")}><Icon name="arrow"/> بازگشت به کتابخانه</button>
-    <article className="text-lesson"><span className="eyebrow">{lesson.course_modules.learning_paths.title} · {lesson.duration_minutes} دقیقه مطالعه</span><h1>{lesson.title}</h1><p className="lesson-lead">{lesson.summary}</p><div className="quote">«{body.quote}»</div><section><h2>هدف درس</h2><p>{body.goal}</p></section><section><h2>ایدهٔ اصلی</h2>{body.idea.map(item=><p key={item}>{item}</p>)}</section><section><h2>مثال</h2><p>{body.example}</p></section><section><h2>{body.exercise.title}</h2><ol>{body.exercise.steps.map(step=><li key={step}>{step}</li>)}</ol></section><section><h2>نکتهٔ مهم</h2><p>{body.mistake}</p></section><section><h2>خلاصه</h2><ul>{body.summary.map(item=><li key={item}>{item}</li>)}</ul></section></article>
+    <article className="text-lesson"><span className="eyebrow">{lesson.course_modules.learning_paths.title} · {lesson.duration_minutes} دقیقه مطالعه</span><h1>{lesson.title}</h1><p className="lesson-lead">{lesson.summary}</p><div className="quote">«{body.quote}»</div><section><h2>هدف درس</h2><p>{body.goal}</p></section><section><h2>ایدهٔ اصلی</h2>{body.idea.map(item=><p key={item}>{item}</p>)}</section><section><h2>مثال</h2><p>{body.example}</p></section><section><h2>{body.exercise.title}</h2><ol>{body.exercise.steps.map(step=><li key={step}>{step}</li>)}</ol></section><section><h2>نکتهٔ مهم</h2><p>{body.mistake}</p></section><section><h2>خلاصه</h2><ul>{body.summary.map(item=><li key={item}>{item}</li>)}</ul></section><div className="lesson-completion">{completed?<span>مطالعهٔ این درس ثبت شد.</span>:<Button onClick={markCompleted} disabled={saving}>{saving?"در حال ثبت…":"مطالعه را تمام کردم"}</Button>}{message&&<small>{message}</small>}</div></article>
   </main><BottomNav page="lesson" go={go}/></>;
 }
 
@@ -409,5 +420,5 @@ export default function App() {
   const displayName=profile?.username || profile?.display_name || session?.user.user_metadata?.username || session?.user.user_metadata?.display_name;
   const visiblePage=!session && protectedPages.includes(page)?"auth":page;
   const headerAuth={authenticated:Boolean(session),displayName,onLogout:logout};
-  return <div dir="rtl">{visiblePage==="home"?<Home go={go} {...headerAuth}/>:visiblePage==="about"?<About go={go} {...headerAuth}/>:visiblePage==="auth"?<Auth go={go} onAuthenticated={authenticated}/>:visiblePage==="dashboard"?<Dashboard go={go} displayName={displayName} onLogout={logout}/>:visiblePage==="library"?<Library go={go} onOpenLesson={openLesson} {...headerAuth}/>:visiblePage==="profile"?<Profile go={go} session={session!} profile={profile} onUpdateUsername={updateUsername} {...headerAuth}/>:visiblePage==="lesson"?<Lesson go={go} lesson={activeLesson} {...headerAuth}/>:visiblePage==="coach"?<Coach go={go} {...headerAuth}/>:visiblePage==="pricing"?<Pricing go={go} choose={setPlan} {...headerAuth}/>:<Checkout go={go} plan={plan} {...headerAuth}/>}<SupportWidget showButton={visiblePage==="home"||visiblePage==="dashboard"}/></div>;
+  return <div dir="rtl">{visiblePage==="home"?<Home go={go} {...headerAuth}/>:visiblePage==="about"?<About go={go} {...headerAuth}/>:visiblePage==="auth"?<Auth go={go} onAuthenticated={authenticated}/>:visiblePage==="dashboard"?<Dashboard go={go} displayName={displayName} onLogout={logout}/>:visiblePage==="library"?<Library go={go} onOpenLesson={openLesson} {...headerAuth}/>:visiblePage==="profile"?<Profile go={go} session={session!} profile={profile} onUpdateUsername={updateUsername} {...headerAuth}/>:visiblePage==="lesson"?<Lesson go={go} lesson={activeLesson} session={session!} {...headerAuth}/>:visiblePage==="coach"?<Coach go={go} {...headerAuth}/>:visiblePage==="pricing"?<Pricing go={go} choose={setPlan} {...headerAuth}/>:<Checkout go={go} plan={plan} {...headerAuth}/>}<SupportWidget showButton={visiblePage==="home"||visiblePage==="dashboard"}/></div>;
 }

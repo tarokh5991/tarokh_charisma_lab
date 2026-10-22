@@ -123,6 +123,35 @@ export async function getPublishedLessons() {
   return lessons.sort((first, second) => first.course_modules.learning_paths.position - second.course_modules.learning_paths.position || first.position - second.position);
 }
 
+export type LessonProgress = {
+  lesson_id: string;
+  completed_at: string | null;
+};
+
+export async function getLessonProgress(session: AuthSession) {
+  const { anonKey } = requireConfig();
+  const response = await fetch(endpoint(`/rest/v1/lesson_progress?user_id=eq.${encodeURIComponent(session.user.id)}&select=lesson_id,completed_at`), {
+    headers: { apikey: anonKey, Authorization: `Bearer ${session.access_token}` },
+  });
+  if (!response.ok) throw new Error("دریافت وضعیت مطالعه انجام نشد.");
+  return await response.json() as LessonProgress[];
+}
+
+export async function completeLesson(session: AuthSession, lessonId: string) {
+  const { anonKey } = requireConfig();
+  const response = await fetch(endpoint("/rest/v1/lesson_progress?on_conflict=user_id,lesson_id"), {
+    method: "POST",
+    headers: {
+      apikey: anonKey,
+      Authorization: `Bearer ${session.access_token}`,
+      "Content-Type": "application/json",
+      Prefer: "resolution=merge-duplicates",
+    },
+    body: JSON.stringify({ user_id: session.user.id, lesson_id: lessonId, completed_at: new Date().toISOString() }),
+  });
+  if (!response.ok) throw new Error("ثبت تکمیل مطالعه انجام نشد.");
+}
+
 function clearSession() {
   localStorage.removeItem("tarokh-auth-session");
 }
