@@ -227,8 +227,9 @@ function Dashboard({ go, onLogout, displayName, session, onOpenLesson }: { go: (
       setCompletedIds(new Set(progress.filter(item=>item.completed_at).map(item=>item.lesson_id)));
     }).catch(()=>{});
   },[session]);
-  const nextLesson=lessons.find(lesson=>!completedIds.has(lesson.id));
   const completedCount=completedIds.size;
+  const unlockedLessons=lessons.filter((lesson,index)=>index===0||completedIds.has(lessons[index-1].id));
+  const nextLesson=unlockedLessons.find(lesson=>!completedIds.has(lesson.id));
   const percentage=lessons.length?Math.round(completedCount/lessons.length*100):0;
   const leaders=[["ش","شاهین آرام","۱۴"],["ک","کاوشگر شب","۱۲"],["م","مرد مسیر","۱۱"],["ذ","ذهن روشن","۱۰"],["س","سرو استوار","۹"],["ر","رهرو آرام","۹"],["ن","نقطه شروع","۸"],["پ","پلنگ صبور","۷"],["ق","قاب طلایی","۷"],["گ","گام بعدی","۶"]];
   return <><Header go={go} authenticated displayName={displayName} onLogout={onLogout}/><main className="app-page">
@@ -266,7 +267,7 @@ function Library({ go, onOpenLesson, session, ...auth }: { go: (p: Page) => void
   },[session]);
   return <><Header go={go} {...auth}/><main className="app-page library-page">
     <div className="library-heading"><span className="eyebrow">آکادمی کاریزما</span><h1>مسیرهای یادگیری</h1><p>پنج درس آغازین CLEAR را با تمرین‌های واقعی دنبال کن.</p></div>
-    {loading?<p className="library-state">در حال دریافت درس‌ها…</p>:message?<p className="library-state library-error">{message}</p>:<div className="lesson-library">{lessons.map((lesson,index)=><article key={lesson.id} className="lesson-library-card"><span className="lesson-number">{String(index+1).padStart(2,"0")}</span><div><small>{lesson.course_modules.learning_paths.title} · {lesson.duration_minutes} دقیقه</small><h2>{lesson.title}</h2><p>{lesson.summary}</p><button className="lesson-available" onClick={()=>onOpenLesson(lesson)}>{completedIds.has(lesson.id)?"درس تکمیل شده":"مطالعهٔ درس متنی"} <Icon name="arrow"/></button></div></article>)}</div>}
+    {loading?<p className="library-state">در حال دریافت درس‌ها…</p>:message?<p className="library-state library-error">{message}</p>:<div className="lesson-library">{lessons.map((lesson,index)=>{const locked=index>0&&!completedIds.has(lessons[index-1].id); return <article key={lesson.id} className={`lesson-library-card ${locked?"locked":""}`}><span className="lesson-number">{String(index+1).padStart(2,"0")}</span><div><small>{lesson.course_modules.learning_paths.title} · {lesson.duration_minutes} دقیقه</small><h2>{lesson.title}</h2><p>{lesson.summary}</p><button className="lesson-available" onClick={()=>onOpenLesson(lesson)} disabled={locked}>{locked?"با تکمیل درس قبلی باز می‌شود":completedIds.has(lesson.id)?"درس تکمیل شده":"مطالعهٔ درس متنی"} {!locked&&<Icon name="arrow"/>}</button></div></article>})}</div>}
   </main><BottomNav page="library" go={go}/></>;
 }
 
