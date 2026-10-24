@@ -334,7 +334,7 @@ function Profile({ go, session, profile, activePlan, onUpdateUsername, onDeleteA
   </main><BottomNav page="profile" go={go}/></>;
 }
 
-function Lesson({ go, lesson, session, ...auth }: { go: (p: Page) => void; lesson: PublishedLesson | null; session: AuthSession } & HeaderProps) {
+function Lesson({ go, lesson, session, onOpenCoach, ...auth }: { go: (p: Page) => void; lesson: PublishedLesson | null; session: AuthSession; onOpenCoach: (scenario: string) => void } & HeaderProps) {
   const [completed,setCompleted]=useState(false);
   const [exerciseCompleted,setExerciseCompleted]=useState(false);
   const [saving,setSaving]=useState(false);
@@ -350,6 +350,9 @@ function Lesson({ go, lesson, session, ...auth }: { go: (p: Page) => void; lesso
   },[lesson,session]);
   if(!lesson) return <><Header go={go} {...auth}/><main className="app-page lesson-page"><button className="back" onClick={() => go("library")}><Icon name="arrow"/> بازگشت به کتابخانه</button><p className="library-state">برای مطالعه، یک درس را از کتابخانه انتخاب کن.</p></main><BottomNav page="lesson" go={go}/></>;
   const { body }=lesson;
+  const openCoach=()=>{
+    if(body.ai) onOpenCoach(body.ai.scenario);
+  };
   const markCompleted=async()=>{
     setSaving(true); setMessage("");
     try { await completeLesson(session,lesson.id); setCompleted(true); } catch(error) { setMessage(error instanceof Error ? error.message : "ثبت تکمیل مطالعه انجام نشد."); } finally { setSaving(false); }
@@ -360,11 +363,11 @@ function Lesson({ go, lesson, session, ...auth }: { go: (p: Page) => void; lesso
   };
   return <><Header go={go} {...auth}/><main className="app-page lesson-page text-lesson-page">
     <button className="back" onClick={() => go("library")}><Icon name="arrow"/> بازگشت به کتابخانه</button>
-    <article className="text-lesson"><span className="eyebrow">{lesson.course_modules.learning_paths.title} · {lesson.duration_minutes} دقیقه مطالعه</span><h1>{lesson.title}</h1><p className="lesson-lead">{lesson.summary}</p><div className="quote">«{body.quote}»</div><section><h2>هدف درس</h2><p>{body.goal}</p></section><section><h2>ایدهٔ اصلی</h2>{body.idea.map(item=><p key={item}>{item}</p>)}</section><section><h2>مثال</h2><p>{body.example}</p></section><section><h2>{body.exercise.title}</h2><ol>{body.exercise.steps.map(step=><li key={step}>{step}</li>)}</ol><div className="exercise-completion">{exerciseCompleted?<span>تمرین انجام‌شده ثبت شد.</span>:<Button ghost onClick={markExerciseCompleted} disabled={exerciseSaving}>{exerciseSaving?"در حال ثبت…":"تمرین را انجام دادم"}</Button>}</div></section><section><h2>نکتهٔ مهم</h2><p>{body.mistake}</p></section><section><h2>خلاصه</h2><ul>{body.summary.map(item=><li key={item}>{item}</li>)}</ul></section><div className="lesson-completion">{completed?<span>مطالعهٔ این درس ثبت شد.</span>:<Button onClick={markCompleted} disabled={saving}>{saving?"در حال ثبت…":"مطالعه را تمام کردم"}</Button>}{message&&<small>{message}</small>}<Button ghost onClick={()=>go("library")}>بازگشت به کتابخانه <Icon name="arrow"/></Button></div></article>
+    <article className="text-lesson"><span className="eyebrow">{lesson.course_modules.learning_paths.title} · {lesson.duration_minutes} دقیقه مطالعه</span><h1>{lesson.title}</h1><p className="lesson-lead">{lesson.summary}</p><div className="quote">«{body.quote}»</div><section><h2>هدف درس</h2><p>{body.goal}</p></section><section><h2>ایدهٔ اصلی</h2>{body.idea.map(item=><p key={item}>{item}</p>)}</section><section><h2>مثال</h2><p>{body.example}</p></section><section><h2>{body.exercise.title}</h2><ol>{body.exercise.steps.map(step=><li key={step}>{step}</li>)}</ol><div className="exercise-completion">{exerciseCompleted?<span>تمرین انجام‌شده ثبت شد.</span>:<Button ghost onClick={markExerciseCompleted} disabled={exerciseSaving}>{exerciseSaving?"در حال ثبت…":"تمرین را انجام دادم"}</Button>}</div>{body.ai&&<div className="exercise-completion"><Button ghost onClick={openCoach}>تمرین با مربی AI <Icon name="arrow"/></Button><small>{body.ai.goal}</small></div>}</section><section><h2>نکتهٔ مهم</h2><p>{body.mistake}</p></section><section><h2>خلاصه</h2><ul>{body.summary.map(item=><li key={item}>{item}</li>)}</ul></section><div className="lesson-completion">{completed?<span>مطالعهٔ این درس ثبت شد.</span>:<Button onClick={markCompleted} disabled={saving}>{saving?"در حال ثبت…":"مطالعه را تمام کردم"}</Button>}{message&&<small>{message}</small>}<Button ghost onClick={()=>go("library")}>بازگشت به کتابخانه <Icon name="arrow"/></Button></div></article>
   </main><BottomNav page="lesson" go={go}/></>;
 }
 
-function Coach({ go, session, ...auth }: { go: (p: Page) => void; session: AuthSession } & HeaderProps) {
+function Coach({ go, session, initialScenario, ...auth }: { go: (p: Page) => void; session: AuthSession; initialScenario: string | null } & HeaderProps) {
   const scenarioData = {
     "آشنایی در جمع": {
       context:"در یک دورهمی، فرد جدیدی کنار تو ایستاده است.",
@@ -382,8 +385,16 @@ function Coach({ go, session, ...auth }: { go: (p: Page) => void; session: AuthS
       context:"در آسانسور با همکاری که کم می‌شناسی تنها شده‌ای.",
       prompt:"سلام! امروز خیلی شلوغ بود، نه؟",
     },
+    "درخواست آخر هفته": {
+      context:"همکارت در پایان هفته از تو می‌خواهد مسئولیت تازه‌ای را بپذیری، اما زمان کافی نداری.",
+      prompt:"می‌دانم آخر هفته است، اما می‌توانی این کار را تا فردا تحویل بدهی؟",
+    },
+    "شنونده‌ی بی‌حوصله": {
+      context:"در گفت‌وگو متوجه شده‌ای پاسخ‌های طرف مقابل کوتاه شده و حواسش جای دیگری است.",
+      prompt:"ببخشید، کمی ذهنم درگیر است. داشتی چه می‌گفتی؟",
+    },
   };
-  const [scenario,setScenario]=useState<keyof typeof scenarioData>("آشنایی در جمع");
+  const [scenario,setScenario]=useState<keyof typeof scenarioData>(()=>initialScenario && initialScenario in scenarioData ? initialScenario as keyof typeof scenarioData : "آشنایی در جمع");
   const [draft,setDraft]=useState("");
   const [messages,setMessages]=useState<Array<{ role: "user" | "model"; content: string }>>([]);
   const [conversationId,setConversationId]=useState<string|null>(null);
@@ -467,6 +478,7 @@ export default function App() {
   const [profile,setProfile]=useState<UserProfile|null>(null);
   const [page,setPage]=useState<Page>(()=>pageFromHash() || (getStoredSession()?"dashboard":"home"));
   const [activeLesson,setActiveLesson]=useState<PublishedLesson|null>(null);
+  const [activeCoachScenario,setActiveCoachScenario]=useState<string|null>(null);
   const [activePlan,setActivePlan]=useState<string|null>(null);
   const [plan,setPlan]=useState("طلا");
   const protectedPages:Page[]=["dashboard","library","lesson","coach","checkout","profile"];
@@ -520,6 +532,10 @@ export default function App() {
     setActiveLesson(lesson);
     go("lesson");
   };
+  const openCoach=(scenario:string)=>{
+    setActiveCoachScenario(scenario);
+    go("coach");
+  };
   const authenticated=(nextSession:AuthSession)=>{
     setSession(nextSession);
     getUserProfile(nextSession).then(setProfile).catch(()=>setProfile(null));
@@ -551,5 +567,5 @@ export default function App() {
   const displayName=profile?.username || profile?.display_name || session?.user.user_metadata?.username || session?.user.user_metadata?.display_name;
   const visiblePage=!session && protectedPages.includes(page)?"auth":page;
   const headerAuth={authenticated:Boolean(session),displayName,onLogout:logout};
-  return <div dir="rtl">{visiblePage==="home"?<Home go={go} {...headerAuth}/>:visiblePage==="about"?<About go={go} {...headerAuth}/>:visiblePage==="auth"?<Auth go={go} onAuthenticated={authenticated}/>:visiblePage==="dashboard"?<Dashboard go={go} displayName={displayName} onLogout={logout} session={session!} onOpenLesson={openLesson}/>:visiblePage==="library"?<Library go={go} onOpenLesson={openLesson} session={session!} {...headerAuth}/>:visiblePage==="profile"?<Profile go={go} session={session!} profile={profile} activePlan={activePlan} onUpdateUsername={updateUsername} onDeleteAccount={removeAccount} {...headerAuth}/>:visiblePage==="lesson"?<Lesson go={go} lesson={activeLesson} session={session!} {...headerAuth}/>:visiblePage==="coach"?<Coach go={go} session={session!} {...headerAuth}/>:visiblePage==="pricing"?<Pricing go={go} choose={setPlan} {...headerAuth}/>:<Checkout go={go} plan={plan} {...headerAuth}/>}<SupportWidget showButton={visiblePage==="home"||visiblePage==="dashboard"}/></div>;
+  return <div dir="rtl">{visiblePage==="home"?<Home go={go} {...headerAuth}/>:visiblePage==="about"?<About go={go} {...headerAuth}/>:visiblePage==="auth"?<Auth go={go} onAuthenticated={authenticated}/>:visiblePage==="dashboard"?<Dashboard go={go} displayName={displayName} onLogout={logout} session={session!} onOpenLesson={openLesson}/>:visiblePage==="library"?<Library go={go} onOpenLesson={openLesson} session={session!} {...headerAuth}/>:visiblePage==="profile"?<Profile go={go} session={session!} profile={profile} activePlan={activePlan} onUpdateUsername={updateUsername} onDeleteAccount={removeAccount} {...headerAuth}/>:visiblePage==="lesson"?<Lesson go={go} lesson={activeLesson} session={session!} onOpenCoach={openCoach} {...headerAuth}/>:visiblePage==="coach"?<Coach go={go} session={session!} initialScenario={activeCoachScenario} {...headerAuth}/>:visiblePage==="pricing"?<Pricing go={go} choose={setPlan} {...headerAuth}/>:<Checkout go={go} plan={plan} {...headerAuth}/>}<SupportWidget showButton={visiblePage==="home"||visiblePage==="dashboard"}/></div>;
 }

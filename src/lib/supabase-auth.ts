@@ -207,6 +207,7 @@ export type PublishedLesson = {
     exercise: { title: string; steps: string[] };
     mistake: string;
     summary: string[];
+    ai?: { scenario: string; goal: string };
   };
   duration_minutes: number;
   position: number;
