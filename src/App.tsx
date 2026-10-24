@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { completeExercise, completeLesson, createCoachConversation, deleteAccount, getActivePlan, getCoachConversation, getCoachMessages, getLatestAssessment, getLessonProgress, getPublishedLessons, getStoredSession, getUserProfile, requestCoachReply, requestOtp, restoreSession, saveAssessment, saveCoachMessage, saveSession, signOut, updateUserProfile, verifyOtp, type AuthSession, type PublishedLesson, type UserProfile } from "./lib/supabase-auth";
+import { completeExercise, completeLesson, createCoachConversation, deleteAccount, getActivePlan, getCoachConversation, getCoachMessages, getLatestAssessment, getLessonProgress, getPublishedLessons, getStoredSession, getUserProfile, requestCoachReply, requestOtp, restoreSession, saveAssessment, saveCoachMessage, saveSession, signOut, updateUserProfile, verifyOtp, type AuthSession, type CoachMessage, type PublishedLesson, type UserProfile } from "./lib/supabase-auth";
 
 type Page = "home" | "about" | "auth" | "dashboard" | "library" | "lesson" | "coach" | "pricing" | "checkout" | "profile";
 
@@ -396,7 +396,7 @@ function Coach({ go, session, initialScenario, ...auth }: { go: (p: Page) => voi
   };
   const [scenario,setScenario]=useState<keyof typeof scenarioData>(()=>initialScenario && initialScenario in scenarioData ? initialScenario as keyof typeof scenarioData : "آشنایی در جمع");
   const [draft,setDraft]=useState("");
-  const [messages,setMessages]=useState<Array<{ role: "user" | "model"; content: string }>>([]);
+  const [messages,setMessages]=useState<CoachMessage[]>([]);
   const [conversationId,setConversationId]=useState<string|null>(null);
   const [loadingHistory,setLoadingHistory]=useState(true);
   const [sending,setSending]=useState(false);
@@ -440,7 +440,7 @@ function Coach({ go, session, initialScenario, ...auth }: { go: (p: Page) => voi
       setMessages(nextMessages);
       setDraft("");
       const reply=await requestCoachReply(session,{title:scenario,context:scenarioData[scenario].context},nextMessages);
-      const coachMessage={role:"model" as const,content:reply};
+      const coachMessage={role:"model" as const,content:reply.content,feedback:reply.feedback};
       await saveCoachMessage(session,id,coachMessage);
       setMessages(current=>[...current,coachMessage]);
     } catch(error) {
@@ -451,7 +451,7 @@ function Coach({ go, session, initialScenario, ...auth }: { go: (p: Page) => voi
   return <><Header go={go} {...auth}/><main className="coach-page">
     <aside className="scenarios"><span className="eyebrow">مربی هوش مصنوعی</span><h2>تمرین مکالمه</h2><p>یک موقعیت را انتخاب کن و بدون قضاوت تمرین کن.</p>{(Object.keys(scenarioData) as Array<keyof typeof scenarioData>).map(s=><button className={scenario===s?"active":""} disabled={sending||loadingHistory} onClick={()=>changeScenario(s)} key={s}><span>{s}</span><Icon name="arrow"/></button>)}</aside>
     <section className="chat"><div className="chat-head"><div className="ai-dot">AI</div><div><b>{scenario}</b><span>مربی آماده تمرین است</span></div><i/></div>
-      <div className="messages"><div className="context">سناریو: {current.context}</div><div className="message ai"><span>مربی</span><p>{current.prompt}</p></div>{loadingHistory?<div className="message ai"><span>مربی</span><p>در حال بازیابی گفت‌وگو…</p></div>:messages.map((item,index)=><div className={`message ${item.role==="user"?"me":"ai"}`} key={`${item.role}-${index}`}><span>{item.role==="model"?"مربی":""}</span><p>{item.content}</p></div>)}{sending&&<div className="message ai"><span>مربی</span><p>در حال فکرکردن…</p></div>}{message&&<p className="coach-error">{message}</p>}</div>
+      <div className="messages"><div className="context">سناریو: {current.context}</div><div className="message ai"><span>مربی</span><p>{current.prompt}</p></div>{loadingHistory?<div className="message ai"><span>مربی</span><p>در حال بازیابی گفت‌وگو…</p></div>:messages.map((item,index)=><div className={`message ${item.role==="user"?"me":"ai"}`} key={`${item.role}-${index}`}><span>{item.role==="model"?"مربی":""}</span><p>{item.content}</p>{item.role==="model"&&item.feedback&&<div className="feedback"><strong>بازخورد مربی</strong><p><b>نکتهٔ مثبت:</b> {item.feedback.positive}</p><p><b>پیشنهاد اصلاح:</b> {item.feedback.improvement}</p><p><b>پاسخ جایگزین:</b> {item.feedback.alternative}</p></div>}</div>)}{sending&&<div className="message ai"><span>مربی</span><p>در حال فکرکردن…</p></div>}{message&&<p className="coach-error">{message}</p>}</div>
       <div className="composer"><input value={draft} disabled={sending||loadingHistory} onChange={e=>setDraft(e.target.value)} placeholder="پاسخت را بنویس..." onKeyDown={e=>e.key==="Enter"&&send()}/><button aria-label="ارسال پاسخ" disabled={sending||loadingHistory} onClick={send}><Icon name="send"/></button></div>
     </section>
   </main><BottomNav page="coach" go={go}/></>;

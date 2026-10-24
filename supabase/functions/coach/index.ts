@@ -11,6 +11,29 @@ type RequestBody = {
   messages: Array<{ role: "user" | "model"; content: string }>;
 };
 
+type CoachFeedback = {
+  positive: string;
+  improvement: string;
+  alternative: string;
+};
+
+type CoachResponse = {
+  content: string;
+  feedback?: CoachFeedback;
+};
+
+function parseCoachResponse(value: string): CoachResponse {
+  const normalized = value.replace(/^```(?:json)?\s*/i, "").replace(/\s*```$/, "");
+  try {
+    const payload = JSON.parse(normalized) as Partial<CoachResponse>;
+    if (typeof payload.content === "string" && payload.feedback && typeof payload.feedback.positive === "string" && typeof payload.feedback.improvement === "string" && typeof payload.feedback.alternative === "string") {
+      return { content: payload.content, feedback: payload.feedback };
+    }
+  } catch {
+  }
+  return { content: value };
+}
+
 Deno.serve(async (request) => {
   if (request.method === "OPTIONS") return new Response("ok", { headers: corsHeaders });
   if (request.method !== "POST") return new Response("Method not allowed", { status: 405, headers: corsHeaders });
@@ -34,7 +57,7 @@ Deno.serve(async (request) => {
   const apiKey = Deno.env.get("GOOGLE_AI_API_KEY");
   if (!apiKey) return new Response("Coach is not configured", { status: 503, headers: corsHeaders });
 
-  const systemInstruction = `تو مربی تمرین مهارت ارتباطی TAROKH هستی. پاسخ‌ها فقط فارسی، محترمانه، کوتاه و عملی باشند. در سناریوی «${scenario.title}» نقش طرف مقابل را بازی کن و پس از پاسخ کاربر، یک بازخورد مشخص و کوتاه بده؛ سپس گفت‌وگو را طبیعی ادامه بده. از فریب، فشار، تحقیر، نقض رضایت یا توصیه درمانی پرهیز کن. زمینه: ${scenario.context}`;
+  const systemInstruction = `تو مربی تمرین مهارت ارتباطی TAROKH هستی. پاسخ‌ها فقط فارسی، محترمانه، کوتاه و عملی باشند. در سناریوی «${scenario.title}» نقش طرف مقابل را بازی کن و پس از پاسخ کاربر، یک بازخورد مشخص و کوتاه بده؛ سپس گفت‌وگو را طبیعی ادامه بده. از فریب، فشار، تحقیر، نقض رضایت یا توصیه درمانی پرهیز کن. زمینه: ${scenario.context}\n\nفقط JSON معتبر و بدون markdown برگردان: {"content":"پاسخ کوتاه در نقش طرف مقابل","feedback":{"positive":"یک نکتهٔ مثبت مشخص","improvement":"یک پیشنهاد اصلاح مشخص","alternative":"یک پاسخ جایگزین کوتاه"}}.`;
   const contents = messages.map(message => ({
     role: message.role,
     parts: [{ text: message.content.slice(0, 2000) }],
@@ -51,8 +74,8 @@ Deno.serve(async (request) => {
   }
 
   const payload = await response.json() as { candidates?: Array<{ content?: { parts?: Array<{ text?: string }> } }> };
-  const content = payload.candidates?.[0]?.content?.parts?.map(part => part.text || "").join("").trim();
-  if (!content) return new Response("Coach response failed", { status: 502, headers: corsHeaders });
+  const rawContent = payload.candidates?.[0]?.content?.parts?.map(part => part.text || "").join("").trim();
+  if (!rawContent) return new Response("Coach response failed", { status: 502, headers: corsHeaders });
 
-  return Response.json({ content }, { headers: corsHeaders });
+  return Response.json(parseCoachResponse(rawContent), { headers: corsHeaders });
 });
