@@ -367,7 +367,7 @@ function Lesson({ go, lesson, session, onOpenCoach, ...auth }: { go: (p: Page) =
   </main><BottomNav page="lesson" go={go}/></>;
 }
 
-function Coach({ go, session, initialScenario, activePlan, ...auth }: { go: (p: Page) => void; session: AuthSession; initialScenario: string | null; activePlan: string | null } & HeaderProps) {
+function Coach({ go, session, initialScenario, ...auth }: { go: (p: Page) => void; session: AuthSession; initialScenario: string | null } & HeaderProps) {
   const scenarioData = {
     "آشنایی در جمع": {
       context:"در یک دورهمی، فرد جدیدی کنار تو ایستاده است.",
@@ -394,7 +394,6 @@ function Coach({ go, session, initialScenario, activePlan, ...auth }: { go: (p: 
       prompt:"ببخشید، کمی ذهنم درگیر است. داشتی چه می‌گفتی؟",
     },
   };
-  const hasCoachAccess=Boolean(activePlan && activePlan !== "برنز");
   const [scenario,setScenario]=useState<keyof typeof scenarioData>(()=>initialScenario && initialScenario in scenarioData ? initialScenario as keyof typeof scenarioData : "آشنایی در جمع");
   const [draft,setDraft]=useState("");
   const [messages,setMessages]=useState<Array<{ role: "user" | "model"; content: string }>>([]);
@@ -429,7 +428,7 @@ function Coach({ go, session, initialScenario, activePlan, ...auth }: { go: (p: 
   };
   const send=async()=>{
     const content=draft.trim();
-    if(!content||sending||loadingHistory||!hasCoachAccess) return;
+    if(!content||sending||loadingHistory) return;
     setSending(true);
     setMessage("");
     try {
@@ -452,8 +451,8 @@ function Coach({ go, session, initialScenario, activePlan, ...auth }: { go: (p: 
   return <><Header go={go} {...auth}/><main className="coach-page">
     <aside className="scenarios"><span className="eyebrow">مربی هوش مصنوعی</span><h2>تمرین مکالمه</h2><p>یک موقعیت را انتخاب کن و بدون قضاوت تمرین کن.</p>{(Object.keys(scenarioData) as Array<keyof typeof scenarioData>).map(s=><button className={scenario===s?"active":""} disabled={sending||loadingHistory} onClick={()=>changeScenario(s)} key={s}><span>{s}</span><Icon name="arrow"/></button>)}</aside>
     <section className="chat"><div className="chat-head"><div className="ai-dot">AI</div><div><b>{scenario}</b><span>مربی آماده تمرین است</span></div><i/></div>
-      <div className="messages"><div className="context">سناریو: {current.context}</div><div className="message ai"><span>مربی</span><p>{current.prompt}</p></div>{loadingHistory?<div className="message ai"><span>مربی</span><p>در حال بازیابی گفت‌وگو…</p></div>:messages.map((item,index)=><div className={`message ${item.role==="user"?"me":"ai"}`} key={`${item.role}-${index}`}><span>{item.role==="model"?"مربی":""}</span><p>{item.content}</p></div>)}{sending&&<div className="message ai"><span>مربی</span><p>در حال فکرکردن…</p></div>}{message&&<p className="coach-error">{message}</p>}{!hasCoachAccess&&<p className="coach-error">مربی AI از پلن نقره به بالا در دسترس است.</p>}</div>
-      <div className="composer"><input value={draft} disabled={sending||loadingHistory||!hasCoachAccess} onChange={e=>setDraft(e.target.value)} placeholder={hasCoachAccess?"پاسخت را بنویس...":"مربی AI در پلن تو فعال نیست"} onKeyDown={e=>e.key==="Enter"&&send()}/><button aria-label="ارسال پاسخ" disabled={sending||loadingHistory||!hasCoachAccess} onClick={send}><Icon name="send"/></button></div>
+      <div className="messages"><div className="context">سناریو: {current.context}</div><div className="message ai"><span>مربی</span><p>{current.prompt}</p></div>{loadingHistory?<div className="message ai"><span>مربی</span><p>در حال بازیابی گفت‌وگو…</p></div>:messages.map((item,index)=><div className={`message ${item.role==="user"?"me":"ai"}`} key={`${item.role}-${index}`}><span>{item.role==="model"?"مربی":""}</span><p>{item.content}</p></div>)}{sending&&<div className="message ai"><span>مربی</span><p>در حال فکرکردن…</p></div>}{message&&<p className="coach-error">{message}</p>}</div>
+      <div className="composer"><input value={draft} disabled={sending||loadingHistory} onChange={e=>setDraft(e.target.value)} placeholder="پاسخت را بنویس..." onKeyDown={e=>e.key==="Enter"&&send()}/><button aria-label="ارسال پاسخ" disabled={sending||loadingHistory} onClick={send}><Icon name="send"/></button></div>
     </section>
   </main><BottomNav page="coach" go={go}/></>;
 }
@@ -568,5 +567,5 @@ export default function App() {
   const displayName=profile?.username || profile?.display_name || session?.user.user_metadata?.username || session?.user.user_metadata?.display_name;
   const visiblePage=!session && protectedPages.includes(page)?"auth":page;
   const headerAuth={authenticated:Boolean(session),displayName,onLogout:logout};
-  return <div dir="rtl">{visiblePage==="home"?<Home go={go} {...headerAuth}/>:visiblePage==="about"?<About go={go} {...headerAuth}/>:visiblePage==="auth"?<Auth go={go} onAuthenticated={authenticated}/>:visiblePage==="dashboard"?<Dashboard go={go} displayName={displayName} onLogout={logout} session={session!} onOpenLesson={openLesson}/>:visiblePage==="library"?<Library go={go} onOpenLesson={openLesson} session={session!} {...headerAuth}/>:visiblePage==="profile"?<Profile go={go} session={session!} profile={profile} activePlan={activePlan} onUpdateUsername={updateUsername} onDeleteAccount={removeAccount} {...headerAuth}/>:visiblePage==="lesson"?<Lesson go={go} lesson={activeLesson} session={session!} onOpenCoach={openCoach} {...headerAuth}/>:visiblePage==="coach"?<Coach go={go} session={session!} initialScenario={activeCoachScenario} activePlan={activePlan} {...headerAuth}/>:visiblePage==="pricing"?<Pricing go={go} choose={setPlan} {...headerAuth}/>:<Checkout go={go} plan={plan} {...headerAuth}/>}<SupportWidget showButton={visiblePage==="home"||visiblePage==="dashboard"}/></div>;
+  return <div dir="rtl">{visiblePage==="home"?<Home go={go} {...headerAuth}/>:visiblePage==="about"?<About go={go} {...headerAuth}/>:visiblePage==="auth"?<Auth go={go} onAuthenticated={authenticated}/>:visiblePage==="dashboard"?<Dashboard go={go} displayName={displayName} onLogout={logout} session={session!} onOpenLesson={openLesson}/>:visiblePage==="library"?<Library go={go} onOpenLesson={openLesson} session={session!} {...headerAuth}/>:visiblePage==="profile"?<Profile go={go} session={session!} profile={profile} activePlan={activePlan} onUpdateUsername={updateUsername} onDeleteAccount={removeAccount} {...headerAuth}/>:visiblePage==="lesson"?<Lesson go={go} lesson={activeLesson} session={session!} onOpenCoach={openCoach} {...headerAuth}/>:visiblePage==="coach"?<Coach go={go} session={session!} initialScenario={activeCoachScenario} {...headerAuth}/>:visiblePage==="pricing"?<Pricing go={go} choose={setPlan} {...headerAuth}/>:<Checkout go={go} plan={plan} {...headerAuth}/>}<SupportWidget showButton={visiblePage==="home"||visiblePage==="dashboard"}/></div>;
 }

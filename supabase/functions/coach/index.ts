@@ -26,23 +26,6 @@ Deno.serve(async (request) => {
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) return new Response("Unauthorized", { status: 401, headers: corsHeaders });
 
-  const { data: entitlements, error: entitlementError } = await supabase
-    .from("entitlements")
-    .select("plans!inner(ai_message_limit)")
-    .eq("user_id", user.id)
-    .eq("status", "active")
-    .or(`ends_at.is.null,ends_at.gt.${new Date().toISOString()}`)
-    .order("starts_at", { ascending: false })
-    .limit(1);
-  if (entitlementError) {
-    console.error("Coach entitlement lookup failed", entitlementError.message);
-    return new Response("Coach access check failed", { status: 500, headers: corsHeaders });
-  }
-  const entitlement = entitlements?.[0] as { plans: { ai_message_limit: number | null } | null } | undefined;
-  if (!entitlement?.plans || entitlement.plans.ai_message_limit === 0) {
-    return new Response("Coach access is unavailable for this plan", { status: 403, headers: corsHeaders });
-  }
-
   const { scenario, messages } = await request.json() as RequestBody;
   if (!scenario?.title || !scenario?.context || !Array.isArray(messages) || messages.length === 0 || messages.length > 20) {
     return new Response("Invalid request", { status: 400, headers: corsHeaders });

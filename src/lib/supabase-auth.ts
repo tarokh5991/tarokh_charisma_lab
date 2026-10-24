@@ -122,7 +122,7 @@ export async function requestCoachReply(session: AuthSession, scenario: { title:
     },
     body: JSON.stringify({ scenario, messages }),
   });
-  if (!response.ok) throw new Error(response.status === 403 ? "پلن فعلی تو دسترسی به مربی AI ندارد." : response.status === 503 ? "مربی هنوز آماده نشده است." : "پاسخ مربی دریافت نشد. دوباره تلاش کن.");
+  if (!response.ok) throw new Error(response.status === 503 ? "مربی هنوز آماده نشده است." : "پاسخ مربی دریافت نشد. دوباره تلاش کن.");
   const payload = await response.json() as { content?: string };
   if (!payload.content) throw new Error("پاسخ مربی دریافت نشد. دوباره تلاش کن.");
   return payload.content;
