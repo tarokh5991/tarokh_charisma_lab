@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { completeExercise, completeLesson, deleteAccount, getActivePlan, getLatestAssessment, getLessonProgress, getPublishedLessons, getStoredSession, getUserProfile, requestCoachReply, requestOtp, restoreSession, saveAssessment, saveSession, signOut, updateUserProfile, verifyOtp, type AuthSession, type PublishedLesson, type UserProfile } from "./lib/supabase-auth";
+import { completeExercise, completeLesson, createCoachConversation, deleteAccount, getActivePlan, getCoachConversation, getCoachMessages, getLatestAssessment, getLessonProgress, getPublishedLessons, getStoredSession, getUserProfile, requestCoachReply, requestOtp, restoreSession, saveAssessment, saveCoachMessage, saveSession, signOut, updateUserProfile, verifyOtp, type AuthSession, type PublishedLesson, type UserProfile } from "./lib/supabase-auth";
 
 type Page = "home" | "about" | "auth" | "dashboard" | "library" | "lesson" | "coach" | "pricing" | "checkout" | "profile";
 
@@ -386,36 +386,62 @@ function Coach({ go, session, ...auth }: { go: (p: Page) => void; session: AuthS
   const [scenario,setScenario]=useState<keyof typeof scenarioData>("آشنایی در جمع");
   const [draft,setDraft]=useState("");
   const [messages,setMessages]=useState<Array<{ role: "user" | "model"; content: string }>>([]);
+  const [conversationId,setConversationId]=useState<string|null>(null);
+  const [loadingHistory,setLoadingHistory]=useState(true);
   const [sending,setSending]=useState(false);
   const [message,setMessage]=useState("");
-  const changeScenario=(next:keyof typeof scenarioData)=>{
-    setScenario(next);
+  useEffect(()=>{
+    let active=true;
     setDraft("");
     setMessages([]);
+    setConversationId(null);
     setMessage("");
+    setLoadingHistory(true);
+    getCoachConversation(session,scenario).then(async conversation=>{
+      if(!active) return;
+      if(!conversation) return;
+      const history=await getCoachMessages(session,conversation.id);
+      if(!active) return;
+      setConversationId(conversation.id);
+      setMessages(history);
+    }).catch(()=>{
+      if(active) setMessage("بازیابی گفت‌وگو انجام نشد. دوباره تلاش کن.");
+    }).finally(()=>{
+      if(active) setLoadingHistory(false);
+    });
+    return ()=>{active=false;};
+  },[scenario,session]);
+  const changeScenario=(next:keyof typeof scenarioData)=>{
+    if(sending||loadingHistory) return;
+    setScenario(next);
   };
   const send=async()=>{
     const content=draft.trim();
-    if(!content||sending) return;
-    const nextMessages=[...messages,{role:"user" as const,content}];
-    setMessages(nextMessages);
-    setDraft("");
+    if(!content||sending||loadingHistory) return;
     setSending(true);
     setMessage("");
     try {
+      const id=conversationId || (await createCoachConversation(session,scenario)).id;
+      if(!conversationId) setConversationId(id);
+      const userMessage={role:"user" as const,content};
+      await saveCoachMessage(session,id,userMessage);
+      const nextMessages=[...messages,userMessage];
+      setMessages(nextMessages);
+      setDraft("");
       const reply=await requestCoachReply(session,{title:scenario,context:scenarioData[scenario].context},nextMessages);
-      setMessages(current=>[...current,{role:"model",content:reply}]);
+      const coachMessage={role:"model" as const,content:reply};
+      await saveCoachMessage(session,id,coachMessage);
+      setMessages(current=>[...current,coachMessage]);
     } catch(error) {
-      setMessages(current=>current.slice(0,-1));
       setMessage(error instanceof Error?error.message:"پاسخ مربی دریافت نشد. دوباره تلاش کن.");
     } finally { setSending(false); }
   };
   const current=scenarioData[scenario];
   return <><Header go={go} {...auth}/><main className="coach-page">
-    <aside className="scenarios"><span className="eyebrow">مربی هوش مصنوعی</span><h2>تمرین مکالمه</h2><p>یک موقعیت را انتخاب کن و بدون قضاوت تمرین کن.</p>{(Object.keys(scenarioData) as Array<keyof typeof scenarioData>).map(s=><button className={scenario===s?"active":""} onClick={()=>changeScenario(s)} key={s}><span>{s}</span><Icon name="arrow"/></button>)}</aside>
+    <aside className="scenarios"><span className="eyebrow">مربی هوش مصنوعی</span><h2>تمرین مکالمه</h2><p>یک موقعیت را انتخاب کن و بدون قضاوت تمرین کن.</p>{(Object.keys(scenarioData) as Array<keyof typeof scenarioData>).map(s=><button className={scenario===s?"active":""} disabled={sending||loadingHistory} onClick={()=>changeScenario(s)} key={s}><span>{s}</span><Icon name="arrow"/></button>)}</aside>
     <section className="chat"><div className="chat-head"><div className="ai-dot">AI</div><div><b>{scenario}</b><span>مربی آماده تمرین است</span></div><i/></div>
-      <div className="messages"><div className="context">سناریو: {current.context}</div><div className="message ai"><span>مربی</span><p>{current.prompt}</p></div>{messages.map((item,index)=><div className={`message ${item.role==="user"?"me":"ai"}`} key={`${item.role}-${index}`}><span>{item.role==="model"?"مربی":""}</span><p>{item.content}</p></div>)}{sending&&<div className="message ai"><span>مربی</span><p>در حال فکرکردن…</p></div>}{message&&<p className="coach-error">{message}</p>}</div>
-      <div className="composer"><input value={draft} disabled={sending} onChange={e=>setDraft(e.target.value)} placeholder="پاسخت را بنویس..." onKeyDown={e=>e.key==="Enter"&&send()}/><button aria-label="ارسال پاسخ" disabled={sending} onClick={send}><Icon name="send"/></button></div>
+      <div className="messages"><div className="context">سناریو: {current.context}</div><div className="message ai"><span>مربی</span><p>{current.prompt}</p></div>{loadingHistory?<div className="message ai"><span>مربی</span><p>در حال بازیابی گفت‌وگو…</p></div>:messages.map((item,index)=><div className={`message ${item.role==="user"?"me":"ai"}`} key={`${item.role}-${index}`}><span>{item.role==="model"?"مربی":""}</span><p>{item.content}</p></div>)}{sending&&<div className="message ai"><span>مربی</span><p>در حال فکرکردن…</p></div>}{message&&<p className="coach-error">{message}</p>}</div>
+      <div className="composer"><input value={draft} disabled={sending||loadingHistory} onChange={e=>setDraft(e.target.value)} placeholder="پاسخت را بنویس..." onKeyDown={e=>e.key==="Enter"&&send()}/><button aria-label="ارسال پاسخ" disabled={sending||loadingHistory} onClick={send}><Icon name="send"/></button></div>
     </section>
   </main><BottomNav page="coach" go={go}/></>;
 }

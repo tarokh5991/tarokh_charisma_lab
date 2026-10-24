@@ -128,6 +128,57 @@ export async function requestCoachReply(session: AuthSession, scenario: { title:
   return payload.content;
 }
 
+export type CoachMessage = { role: "user" | "model"; content: string };
+
+type CoachConversation = { id: string };
+
+export async function getCoachConversation(session: AuthSession, scenarioKey: string) {
+  const { anonKey } = requireConfig();
+  const response = await fetch(endpoint(`/rest/v1/ai_conversations?user_id=eq.${encodeURIComponent(session.user.id)}&scenario_key=eq.${encodeURIComponent(scenarioKey)}&select=id&order=updated_at.desc&limit=1`), {
+    headers: { apikey: anonKey, Authorization: `Bearer ${session.access_token}` },
+  });
+  if (!response.ok) throw new Error("دریافت گفت‌وگو انجام نشد.");
+  const conversations = await response.json() as CoachConversation[];
+  return conversations[0] || null;
+}
+
+export async function createCoachConversation(session: AuthSession, scenarioKey: string) {
+  const { anonKey } = requireConfig();
+  const response = await fetch(endpoint("/rest/v1/ai_conversations"), {
+    method: "POST",
+    headers: { apikey: anonKey, Authorization: `Bearer ${session.access_token}`, "Content-Type": "application/json", Prefer: "return=representation" },
+    body: JSON.stringify({ user_id: session.user.id, scenario_key: scenarioKey, title: scenarioKey }),
+  });
+  if (!response.ok) throw new Error("ساخت گفت‌وگو انجام نشد.");
+  const conversations = await response.json() as CoachConversation[];
+  return conversations[0];
+}
+
+export async function getCoachMessages(session: AuthSession, conversationId: string) {
+  const { anonKey } = requireConfig();
+  const response = await fetch(endpoint(`/rest/v1/ai_messages?conversation_id=eq.${encodeURIComponent(conversationId)}&select=role,content&order=created_at.asc`), {
+    headers: { apikey: anonKey, Authorization: `Bearer ${session.access_token}` },
+  });
+  if (!response.ok) throw new Error("دریافت پیام‌ها انجام نشد.");
+  const messages = await response.json() as Array<{ role: "user" | "assistant"; content: string }>;
+  return messages.map(message => ({ role: message.role === "assistant" ? "model" as const : "user" as const, content: message.content }));
+}
+
+export async function saveCoachMessage(session: AuthSession, conversationId: string, message: CoachMessage) {
+  const { anonKey } = requireConfig();
+  const response = await fetch(endpoint("/rest/v1/ai_messages"), {
+    method: "POST",
+    headers: { apikey: anonKey, Authorization: `Bearer ${session.access_token}`, "Content-Type": "application/json" },
+    body: JSON.stringify({ conversation_id: conversationId, role: message.role === "model" ? "assistant" : "user", content: message.content }),
+  });
+  if (!response.ok) throw new Error("ذخیرهٔ پیام انجام نشد.");
+  await fetch(endpoint(`/rest/v1/ai_conversations?id=eq.${encodeURIComponent(conversationId)}`), {
+    method: "PATCH",
+    headers: { apikey: anonKey, Authorization: `Bearer ${session.access_token}`, "Content-Type": "application/json" },
+    body: JSON.stringify({ updated_at: new Date().toISOString() }),
+  });
+}
+
 export async function deleteAccount(session: AuthSession) {
   const { anonKey } = requireConfig();
   const response = await fetch(endpoint("/rest/v1/rpc/delete_my_account"), {
