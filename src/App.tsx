@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { completeExercise, completeLesson, deleteAccount, getActivePlan, getLatestAssessment, getLessonProgress, getPublishedLessons, getStoredSession, getUserProfile, requestOtp, restoreSession, saveAssessment, saveSession, signOut, updateUserProfile, verifyOtp, type AuthSession, type PublishedLesson, type UserProfile } from "./lib/supabase-auth";
+import { completeExercise, completeLesson, deleteAccount, getActivePlan, getLatestAssessment, getLessonProgress, getPublishedLessons, getStoredSession, getUserProfile, requestCoachReply, requestOtp, restoreSession, saveAssessment, saveSession, signOut, updateUserProfile, verifyOtp, type AuthSession, type PublishedLesson, type UserProfile } from "./lib/supabase-auth";
 
 type Page = "home" | "about" | "auth" | "dashboard" | "library" | "lesson" | "coach" | "pricing" | "checkout" | "profile";
 
@@ -364,48 +364,58 @@ function Lesson({ go, lesson, session, ...auth }: { go: (p: Page) => void; lesso
   </main><BottomNav page="lesson" go={go}/></>;
 }
 
-function Coach({ go, ...auth }: { go: (p: Page) => void } & HeaderProps) {
+function Coach({ go, session, ...auth }: { go: (p: Page) => void; session: AuthSession } & HeaderProps) {
   const scenarioData = {
     "آشنایی در جمع": {
       context:"در یک دورهمی، فرد جدیدی کنار تو ایستاده است.",
       prompt:"فرض کن من آن فرد هستم. چطور گفتگو را شروع می‌کنی؟",
-      reply:"سلام، خوشبختم. من هم اینجا آدم‌های زیادی را نمی‌شناسم؛ تو چطور با این جمع آشنا شدی؟",
     },
     "قرار اول": {
       context:"برای اولین بار با کسی در یک کافه قرار داری و او تازه رسیده است.",
       prompt:"سلام، ببخشید کمی دیر رسیدم. چطوری؟ از کجا شروع کنیم؟",
-      reply:"ممنون که راحت برخورد کردی. مسیر کمی شلوغ بود؛ تو مدت زیادی منتظر ماندی؟",
     },
     "گفتگوی کاری": {
       context:"در جلسه‌ی تیمی، همکارت پیشنهادی می‌دهد که با آن موافق نیستی.",
       prompt:"به نظر من بهتر است کل کار را به هفته‌ی بعد موکول کنیم. نظر تو چیست؟",
-      reply:"نکته‌ات را متوجه شدم. فکر می‌کنی کدام بخش را می‌توانیم همین هفته جلو ببریم؟",
     },
     "شروع مکالمه": {
       context:"در آسانسور با همکاری که کم می‌شناسی تنها شده‌ای.",
       prompt:"سلام! امروز خیلی شلوغ بود، نه؟",
-      reply:"دقیقاً، مخصوصاً بعدازظهر. برای تو هم جلسه‌ها پشت سر هم بود؟",
     },
   };
   const [scenario,setScenario]=useState<keyof typeof scenarioData>("آشنایی در جمع");
   const [draft,setDraft]=useState("");
-  const [submitted,setSubmitted]=useState("");
+  const [messages,setMessages]=useState<Array<{ role: "user" | "model"; content: string }>>([]);
+  const [sending,setSending]=useState(false);
+  const [message,setMessage]=useState("");
   const changeScenario=(next:keyof typeof scenarioData)=>{
     setScenario(next);
     setDraft("");
-    setSubmitted("");
+    setMessages([]);
+    setMessage("");
   };
-  const send=()=>{
-    if(!draft.trim()) return;
-    setSubmitted(draft.trim());
+  const send=async()=>{
+    const content=draft.trim();
+    if(!content||sending) return;
+    const nextMessages=[...messages,{role:"user" as const,content}];
+    setMessages(nextMessages);
     setDraft("");
+    setSending(true);
+    setMessage("");
+    try {
+      const reply=await requestCoachReply(session,{title:scenario,context:scenarioData[scenario].context},nextMessages);
+      setMessages(current=>[...current,{role:"model",content:reply}]);
+    } catch(error) {
+      setMessages(current=>current.slice(0,-1));
+      setMessage(error instanceof Error?error.message:"پاسخ مربی دریافت نشد. دوباره تلاش کن.");
+    } finally { setSending(false); }
   };
   const current=scenarioData[scenario];
   return <><Header go={go} {...auth}/><main className="coach-page">
     <aside className="scenarios"><span className="eyebrow">مربی هوش مصنوعی</span><h2>تمرین مکالمه</h2><p>یک موقعیت را انتخاب کن و بدون قضاوت تمرین کن.</p>{(Object.keys(scenarioData) as Array<keyof typeof scenarioData>).map(s=><button className={scenario===s?"active":""} onClick={()=>changeScenario(s)} key={s}><span>{s}</span><Icon name="arrow"/></button>)}</aside>
     <section className="chat"><div className="chat-head"><div className="ai-dot">AI</div><div><b>{scenario}</b><span>مربی آماده تمرین است</span></div><i/></div>
-      <div className="messages"><div className="context">سناریو: {current.context}</div><div className="message ai"><span>مربی</span><p>{current.prompt}</p></div>{submitted&&<><div className="message me"><p>{submitted}</p></div><div className="message ai"><span>طرف مقابل</span><p>{current.reply}</p></div></>}</div>
-      <div className="composer"><input value={draft} onChange={e=>setDraft(e.target.value)} placeholder="پاسخت را بنویس..." onKeyDown={e=>e.key==="Enter"&&send()}/><button aria-label="ارسال پاسخ" onClick={send}><Icon name="send"/></button></div>
+      <div className="messages"><div className="context">سناریو: {current.context}</div><div className="message ai"><span>مربی</span><p>{current.prompt}</p></div>{messages.map((item,index)=><div className={`message ${item.role==="user"?"me":"ai"}`} key={`${item.role}-${index}`}><span>{item.role==="model"?"مربی":""}</span><p>{item.content}</p></div>)}{sending&&<div className="message ai"><span>مربی</span><p>در حال فکرکردن…</p></div>}{message&&<p className="coach-error">{message}</p>}</div>
+      <div className="composer"><input value={draft} disabled={sending} onChange={e=>setDraft(e.target.value)} placeholder="پاسخت را بنویس..." onKeyDown={e=>e.key==="Enter"&&send()}/><button aria-label="ارسال پاسخ" disabled={sending} onClick={send}><Icon name="send"/></button></div>
     </section>
   </main><BottomNav page="coach" go={go}/></>;
 }
@@ -515,5 +525,5 @@ export default function App() {
   const displayName=profile?.username || profile?.display_name || session?.user.user_metadata?.username || session?.user.user_metadata?.display_name;
   const visiblePage=!session && protectedPages.includes(page)?"auth":page;
   const headerAuth={authenticated:Boolean(session),displayName,onLogout:logout};
-  return <div dir="rtl">{visiblePage==="home"?<Home go={go} {...headerAuth}/>:visiblePage==="about"?<About go={go} {...headerAuth}/>:visiblePage==="auth"?<Auth go={go} onAuthenticated={authenticated}/>:visiblePage==="dashboard"?<Dashboard go={go} displayName={displayName} onLogout={logout} session={session!} onOpenLesson={openLesson}/>:visiblePage==="library"?<Library go={go} onOpenLesson={openLesson} session={session!} {...headerAuth}/>:visiblePage==="profile"?<Profile go={go} session={session!} profile={profile} activePlan={activePlan} onUpdateUsername={updateUsername} onDeleteAccount={removeAccount} {...headerAuth}/>:visiblePage==="lesson"?<Lesson go={go} lesson={activeLesson} session={session!} {...headerAuth}/>:visiblePage==="coach"?<Coach go={go} {...headerAuth}/>:visiblePage==="pricing"?<Pricing go={go} choose={setPlan} {...headerAuth}/>:<Checkout go={go} plan={plan} {...headerAuth}/>}<SupportWidget showButton={visiblePage==="home"||visiblePage==="dashboard"}/></div>;
+  return <div dir="rtl">{visiblePage==="home"?<Home go={go} {...headerAuth}/>:visiblePage==="about"?<About go={go} {...headerAuth}/>:visiblePage==="auth"?<Auth go={go} onAuthenticated={authenticated}/>:visiblePage==="dashboard"?<Dashboard go={go} displayName={displayName} onLogout={logout} session={session!} onOpenLesson={openLesson}/>:visiblePage==="library"?<Library go={go} onOpenLesson={openLesson} session={session!} {...headerAuth}/>:visiblePage==="profile"?<Profile go={go} session={session!} profile={profile} activePlan={activePlan} onUpdateUsername={updateUsername} onDeleteAccount={removeAccount} {...headerAuth}/>:visiblePage==="lesson"?<Lesson go={go} lesson={activeLesson} session={session!} {...headerAuth}/>:visiblePage==="coach"?<Coach go={go} session={session!} {...headerAuth}/>:visiblePage==="pricing"?<Pricing go={go} choose={setPlan} {...headerAuth}/>:<Checkout go={go} plan={plan} {...headerAuth}/>}<SupportWidget showButton={visiblePage==="home"||visiblePage==="dashboard"}/></div>;
 }

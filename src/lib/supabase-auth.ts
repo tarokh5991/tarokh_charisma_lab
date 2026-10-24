@@ -111,6 +111,23 @@ export async function getLatestAssessment(session: AuthSession) {
   return assessments[0]?.recommended_dimensions || [];
 }
 
+export async function requestCoachReply(session: AuthSession, scenario: { title: string; context: string }, messages: Array<{ role: "user" | "model"; content: string }>) {
+  const { anonKey } = requireConfig();
+  const response = await fetch(endpoint("/functions/v1/coach"), {
+    method: "POST",
+    headers: {
+      apikey: anonKey,
+      Authorization: `Bearer ${session.access_token}`,
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({ scenario, messages }),
+  });
+  if (!response.ok) throw new Error(response.status === 503 ? "مربی هنوز آماده نشده است." : "پاسخ مربی دریافت نشد. دوباره تلاش کن.");
+  const payload = await response.json() as { content?: string };
+  if (!payload.content) throw new Error("پاسخ مربی دریافت نشد. دوباره تلاش کن.");
+  return payload.content;
+}
+
 export async function deleteAccount(session: AuthSession) {
   const { anonKey } = requireConfig();
   const response = await fetch(endpoint("/rest/v1/rpc/delete_my_account"), {
