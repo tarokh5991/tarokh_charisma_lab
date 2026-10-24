@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { completeExercise, completeLesson, createCoachConversation, deleteAccount, getActivePlan, getCoachConversation, getCoachMessages, getLatestAssessment, getLessonProgress, getPublishedLessons, getStoredSession, getUserProfile, requestCoachReply, requestOtp, restoreSession, saveAssessment, saveCoachMessage, saveSession, signOut, updateUserProfile, verifyOtp, type AuthSession, type CoachMessage, type PublishedLesson, type UserProfile } from "./lib/supabase-auth";
+import { completeExercise, completeLesson, createCoachConversation, deleteAccount, deleteCoachConversation, getActivePlan, getCoachConversation, getCoachMessages, getLatestAssessment, getLessonProgress, getPublishedLessons, getStoredSession, getUserProfile, requestCoachReply, requestOtp, restoreSession, saveAssessment, saveCoachMessage, saveSession, signOut, updateUserProfile, verifyOtp, type AuthSession, type CoachMessage, type PublishedLesson, type UserProfile } from "./lib/supabase-auth";
 
 type Page = "home" | "about" | "auth" | "dashboard" | "library" | "lesson" | "coach" | "pricing" | "checkout" | "profile";
 
@@ -38,6 +38,7 @@ const Icon = ({ name }: { name: string }) => {
     lock: <><rect x="5" y="10" width="14" height="11" rx="2" /><path d="M8 10V7a4 4 0 0 1 8 0v3" /></>,
     edit: <><path d="M12 20h9" /><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4Z" /></>,
     close: <><path d="m6 6 12 12" /><path d="m18 6-12 12" /></>,
+    reset: <><path d="M20 11a8 8 0 1 0 2 5" /><path d="M20 4v7h-7" /></>,
   };
   return <svg viewBox="0 0 24 24" aria-hidden="true">{paths[name]}</svg>;
 };
@@ -363,7 +364,7 @@ function Lesson({ go, lesson, session, onOpenCoach, ...auth }: { go: (p: Page) =
   };
   return <><Header go={go} {...auth}/><main className="app-page lesson-page text-lesson-page">
     <button className="back" onClick={() => go("library")}><Icon name="arrow"/> بازگشت به کتابخانه</button>
-    <article className="text-lesson"><span className="eyebrow">{lesson.course_modules.learning_paths.title} · {lesson.duration_minutes} دقیقه مطالعه</span><h1>{lesson.title}</h1><p className="lesson-lead">{lesson.summary}</p><div className="quote">«{body.quote}»</div><section><h2>هدف درس</h2><p>{body.goal}</p></section><section><h2>ایدهٔ اصلی</h2>{body.idea.map(item=><p key={item}>{item}</p>)}</section><section><h2>مثال</h2><p>{body.example}</p></section><section><h2>{body.exercise.title}</h2><ol>{body.exercise.steps.map(step=><li key={step}>{step}</li>)}</ol><div className="exercise-completion">{exerciseCompleted?<span>تمرین انجام‌شده ثبت شد.</span>:<Button ghost onClick={markExerciseCompleted} disabled={exerciseSaving}>{exerciseSaving?"در حال ثبت…":"تمرین را انجام دادم"}</Button>}</div>{body.ai&&<div className="exercise-completion"><Button ghost onClick={openCoach}>تمرین با مربی AI <Icon name="arrow"/></Button><small>{body.ai.goal}</small></div>}</section><section><h2>نکتهٔ مهم</h2><p>{body.mistake}</p></section><section><h2>خلاصه</h2><ul>{body.summary.map(item=><li key={item}>{item}</li>)}</ul></section><div className="lesson-completion">{completed?<span>مطالعهٔ این درس ثبت شد.</span>:<Button onClick={markCompleted} disabled={saving}>{saving?"در حال ثبت…":"مطالعه را تمام کردم"}</Button>}{message&&<small>{message}</small>}<Button ghost onClick={()=>go("library")}>بازگشت به کتابخانه <Icon name="arrow"/></Button></div></article>
+    <article className="text-lesson"><span className="eyebrow">{lesson.course_modules.learning_paths.title} · {lesson.duration_minutes} دقیقه مطالعه</span><h1>{lesson.title}</h1><p className="lesson-lead">{lesson.summary}</p><div className="quote">«{body.quote}»</div><section><h2>هدف درس</h2><p>{body.goal}</p></section><section><h2>ایدهٔ اصلی</h2>{body.idea.map(item=><p key={item}>{item}</p>)}</section><section><h2>مثال</h2><p>{body.example}</p></section><section><h2>{body.exercise.title}</h2><ol>{body.exercise.steps.map(step=><li key={step}>{step}</li>)}</ol><div className="exercise-completion">{exerciseCompleted?<span>تمرین انجام‌شده ثبت شد.</span>:<Button ghost onClick={markExerciseCompleted} disabled={exerciseSaving}>{exerciseSaving?"در حال ثبت…":"تمرین را انجام دادم"}</Button>}</div>{body.ai&&<div className="exercise-completion ai-practice"><Button ghost onClick={openCoach}>تمرین با مربی AI <Icon name="arrow"/></Button><small>{body.ai.goal}</small></div>}</section><section><h2>نکتهٔ مهم</h2><p>{body.mistake}</p></section><section><h2>خلاصه</h2><ul>{body.summary.map(item=><li key={item}>{item}</li>)}</ul></section><div className="lesson-completion">{completed?<span>مطالعهٔ این درس ثبت شد.</span>:<Button onClick={markCompleted} disabled={saving}>{saving?"در حال ثبت…":"مطالعه را تمام کردم"}</Button>}{message&&<small>{message}</small>}<Button ghost onClick={()=>go("library")}>بازگشت به کتابخانه <Icon name="arrow"/></Button></div></article>
   </main><BottomNav page="lesson" go={go}/></>;
 }
 
@@ -400,6 +401,7 @@ function Coach({ go, session, initialScenario, ...auth }: { go: (p: Page) => voi
   const [conversationId,setConversationId]=useState<string|null>(null);
   const [loadingHistory,setLoadingHistory]=useState(true);
   const [sending,setSending]=useState(false);
+  const [resetting,setResetting]=useState(false);
   const [message,setMessage]=useState("");
   useEffect(()=>{
     let active=true;
@@ -423,12 +425,25 @@ function Coach({ go, session, initialScenario, ...auth }: { go: (p: Page) => voi
     return ()=>{active=false;};
   },[scenario,session]);
   const changeScenario=(next:keyof typeof scenarioData)=>{
-    if(sending||loadingHistory) return;
+    if(sending||resetting||loadingHistory) return;
     setScenario(next);
+  };
+  const resetChat=async()=>{
+    if(!conversationId||sending||resetting||!window.confirm("گفت‌وگوی این سناریو پاک می‌شود. ادامه می‌دهی؟")) return;
+    setResetting(true);
+    setMessage("");
+    try {
+      await deleteCoachConversation(session,conversationId);
+      setMessages([]);
+      setConversationId(null);
+      setDraft("");
+    } catch(error) {
+      setMessage(error instanceof Error ? error.message : "ریست گفت‌وگو انجام نشد.");
+    } finally { setResetting(false); }
   };
   const send=async()=>{
     const content=draft.trim();
-    if(!content||sending||loadingHistory) return;
+    if(!content||sending||resetting||loadingHistory) return;
     setSending(true);
     setMessage("");
     try {
@@ -449,10 +464,10 @@ function Coach({ go, session, initialScenario, ...auth }: { go: (p: Page) => voi
   };
   const current=scenarioData[scenario];
   return <><Header go={go} {...auth}/><main className="coach-page">
-    <aside className="scenarios"><span className="eyebrow">مربی هوش مصنوعی</span><h2>تمرین مکالمه</h2><p>یک موقعیت را انتخاب کن و بدون قضاوت تمرین کن.</p>{(Object.keys(scenarioData) as Array<keyof typeof scenarioData>).map(s=><button className={scenario===s?"active":""} disabled={sending||loadingHistory} onClick={()=>changeScenario(s)} key={s}><span>{s}</span><Icon name="arrow"/></button>)}</aside>
-    <section className="chat"><div className="chat-head"><div className="ai-dot">AI</div><div><b>{scenario}</b><span>مربی آماده تمرین است</span></div><i/></div>
+    <aside className="scenarios"><span className="eyebrow">مربی هوش مصنوعی</span><h2>تمرین مکالمه</h2><p>یک موقعیت را انتخاب کن و بدون قضاوت تمرین کن.</p>{(Object.keys(scenarioData) as Array<keyof typeof scenarioData>).map(s=><button className={scenario===s?"active":""} disabled={sending||resetting||loadingHistory} onClick={()=>changeScenario(s)} key={s}><span>{s}</span><Icon name="arrow"/></button>)}</aside>
+    <section className="chat"><div className="chat-head"><div className="ai-dot">AI</div><div><b>{scenario}</b><span>مربی آماده تمرین است</span></div><i/><button className="chat-reset" onClick={resetChat} disabled={!conversationId||sending||resetting||loadingHistory}><Icon name="reset"/>{resetting?"در حال ریست…":"ریست گفتگو"}</button></div>
       <div className="messages"><div className="context">سناریو: {current.context}</div><div className="message ai"><span>مربی</span><p>{current.prompt}</p></div>{loadingHistory?<div className="message ai"><span>مربی</span><p>در حال بازیابی گفت‌وگو…</p></div>:messages.map((item,index)=><div className={`message ${item.role==="user"?"me":"ai"}`} key={`${item.role}-${index}`}><span>{item.role==="model"?"مربی":""}</span><p>{item.content}</p>{item.role==="model"&&item.feedback&&<div className="feedback"><strong>بازخورد مربی</strong><p><b>نکتهٔ مثبت:</b> {item.feedback.positive}</p><p><b>پیشنهاد اصلاح:</b> {item.feedback.improvement}</p><p><b>پاسخ جایگزین:</b> {item.feedback.alternative}</p></div>}</div>)}{sending&&<div className="message ai"><span>مربی</span><p>در حال فکرکردن…</p></div>}{message&&<p className="coach-error">{message}</p>}</div>
-      <div className="composer"><input value={draft} disabled={sending||loadingHistory} onChange={e=>setDraft(e.target.value)} placeholder="پاسخت را بنویس..." onKeyDown={e=>e.key==="Enter"&&send()}/><button aria-label="ارسال پاسخ" disabled={sending||loadingHistory} onClick={send}><Icon name="send"/></button></div>
+      <div className="composer"><input value={draft} disabled={sending||resetting||loadingHistory} onChange={e=>setDraft(e.target.value)} placeholder="پاسخت را بنویس..." onKeyDown={e=>e.key==="Enter"&&send()}/><button aria-label="ارسال پاسخ" disabled={sending||resetting||loadingHistory} onClick={send}><Icon name="send"/></button></div>
     </section>
   </main><BottomNav page="coach" go={go}/></>;
 }

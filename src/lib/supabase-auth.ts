@@ -162,6 +162,15 @@ export async function createCoachConversation(session: AuthSession, scenarioKey:
   return conversations[0];
 }
 
+export async function deleteCoachConversation(session: AuthSession, conversationId: string) {
+  const { anonKey } = requireConfig();
+  const response = await fetch(endpoint(`/rest/v1/ai_conversations?id=eq.${encodeURIComponent(conversationId)}`), {
+    method: "DELETE",
+    headers: { apikey: anonKey, Authorization: `Bearer ${session.access_token}` },
+  });
+  if (!response.ok) throw new Error("ریست گفت‌وگو انجام نشد.");
+}
+
 export async function getCoachMessages(session: AuthSession, conversationId: string) {
   const { anonKey } = requireConfig();
   const response = await fetch(endpoint(`/rest/v1/ai_messages?conversation_id=eq.${encodeURIComponent(conversationId)}&select=role,content,feedback&order=created_at.asc`), {
