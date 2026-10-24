@@ -45,7 +45,10 @@ Deno.serve(async (request) => {
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ systemInstruction: { parts: [{ text: systemInstruction }] }, contents }),
   });
-  if (!response.ok) return new Response("Coach response failed", { status: 502, headers: corsHeaders });
+  if (!response.ok) {
+    console.error("AI provider request failed", response.status, await response.text());
+    return new Response("Coach response failed", { status: 502, headers: corsHeaders });
+  }
 
   const payload = await response.json() as { candidates?: Array<{ content?: { parts?: Array<{ text?: string }> } }> };
   const content = payload.candidates?.[0]?.content?.parts?.map(part => part.text || "").join("").trim();
