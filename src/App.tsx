@@ -51,7 +51,7 @@ type HeaderProps = { authenticated?: boolean; displayName?: string; onLogout?: (
 const Header = ({ go, simple = false, authenticated = false, displayName, onLogout }: { go: (p: Page) => void; simple?: boolean } & HeaderProps) => (
   <header className="header">
     <button className="brand" onClick={() => go("home")}><span>TAROKH</span><small>CHARISMA LAB</small></button>
-    {!simple && <nav><button onClick={() => go("home")}>خانه</button><button onClick={() => go("dashboard")}>آکادمی</button><button onClick={() => go("pricing")}>پلن‌ها</button><button onClick={() => go("about")}>درباره ما</button><button onClick={() => window.dispatchEvent(new Event("open-support"))}>پشتیبانی</button></nav>}
+    {!simple && <nav><button onClick={() => go("home")}>خانه</button><button onClick={() => go("dashboard")}>آکادمی</button><button onClick={() => go("coach")}>مربی AI</button><button onClick={() => go("pricing")}>پلن‌ها</button><button onClick={() => go("about")}>درباره ما</button><button onClick={() => window.dispatchEvent(new Event("open-support"))}>پشتیبانی</button></nav>}
     {authenticated ? <div className="account-actions"><button className="header-user" onClick={() => go("profile")}>{displayName || "حساب من"}</button><Button onClick={onLogout} ghost>خروج</Button></div> : <Button onClick={() => go("auth")} ghost>ورود / ثبت‌نام</Button>}
   </header>
 );
