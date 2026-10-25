@@ -487,17 +487,17 @@ function Coach({ go, session, initialScenario, ...auth }: { go: (p: Page) => voi
   const current=scenarioData[scenario];
   return <><Header go={go} {...auth}/><main className="coach-page">
     <aside className="scenarios"><span className="eyebrow">مربی هوش مصنوعی</span><h2>تمرین مکالمه</h2><p>یک موقعیت را انتخاب کن و بدون قضاوت تمرین کن.</p>{alwaysAvailableScenarios.map(s=><button className={scenario===s?"active":""} disabled={sending||resetting||loadingHistory} onClick={()=>changeScenario(s)} key={s}><span>{s}</span><Icon name="arrow"/></button>)}</aside>
-    <section className="chat"><div className="chat-head"><div className="ai-dot">AI</div><div><b>{scenario}</b><span>مربی آماده تمرین است</span><small className="quota-label">{quota?.monthly_limit===null?"سهمیه: نامحدود":quota?`سهمیهٔ باقی‌مانده: ${quota.remaining}`:"در حال دریافت سهمیه…"}</small></div><i/><button className="chat-reset" onClick={resetChat} disabled={!conversationId||sending||resetting||loadingHistory}><Icon name="reset"/>{resetting?"در حال ریست…":"ریست گفتگو"}</button></div>
+    <section className="chat"><div className="chat-head"><div className="ai-dot">AI</div><div><b>{scenario}</b><span>مربی آماده تمرین است</span><small className="quota-label">{quota?.daily_limit===null?"سهمیهٔ روزانه: نامحدود":quota?`سهمیهٔ باقی‌ماندهٔ امروز: ${quota.remaining}`:"در حال دریافت سهمیه…"}</small></div><i/><button className="chat-reset" onClick={resetChat} disabled={!conversationId||sending||resetting||loadingHistory}><Icon name="reset"/>{resetting?"در حال ریست…":"ریست گفتگو"}</button></div>
       <div className="messages"><div className="context">سناریو: {current.context}</div><div className="message ai"><span>مربی</span><p>{current.prompt}</p></div>{loadingHistory?<div className="message ai"><span>مربی</span><p>در حال بازیابی گفت‌وگو…</p></div>:messages.map((item,index)=><div className={`message ${item.role==="user"?"me":"ai"}`} key={`${item.role}-${index}`}><span>{item.role==="model"?"مربی":""}</span><p>{item.content}</p>{item.role==="model"&&item.feedback&&<div className="feedback"><strong>بازخورد مربی</strong><p><b>نکتهٔ مثبت:</b> {item.feedback.positive}</p><p><b>پیشنهاد اصلاح:</b> {item.feedback.improvement}</p><p><b>پاسخ جایگزین:</b> {item.feedback.alternative}</p></div>}</div>)}{sending&&<div className="message ai"><span>مربی</span><p>در حال فکرکردن…</p></div>}{message&&<p className="coach-error">{message}</p>}</div>
-      <div className="composer"><input value={draft} disabled={sending||resetting||loadingHistory||Boolean(quota&&!quota.allowed)} onChange={e=>setDraft(e.target.value)} placeholder={quota&&!quota.allowed?"سهمیهٔ این ماه تمام شده است":"پاسخت را بنویس..."} onKeyDown={e=>e.key==="Enter"&&send()}/><button aria-label="ارسال پاسخ" disabled={sending||resetting||loadingHistory||Boolean(quota&&!quota.allowed)} onClick={send}><Icon name="send"/></button></div>
+      <div className="composer"><input value={draft} disabled={sending||resetting||loadingHistory||Boolean(quota&&!quota.allowed)} onChange={e=>setDraft(e.target.value)} placeholder={quota&&!quota.allowed?"سهمیهٔ امروز تمام شده است":"پاسخت را بنویس..."} onKeyDown={e=>e.key==="Enter"&&send()}/><button aria-label="ارسال پاسخ" disabled={sending||resetting||loadingHistory||Boolean(quota&&!quota.allowed)} onClick={send}><Icon name="send"/></button></div>
     </section>
   </main><BottomNav page="coach" go={go}/></>;
 }
 
 const plans = [
-  {name:"برنز",slug:"bronze",price:"۲٫۵",desc:"شروع اصولی و مستقل",items:["ورود امن با OTP و حساب پایدار","ارزیابی اولیهٔ CLEAR","دسترسی کامل به دوره","کتابخانهٔ درس‌های مرحله‌ای","تمرین‌های عملی هر درس","داشبورد پیشرفت، streak و تاریخچه"]},
-  {name:"نقره",slug:"silver",price:"۳٫۵",desc:"تمرین با همراهی بیشتر",items:["تمام امکانات برنز","مربی AI سناریومحور، ماهانه ۳۰ پیام","تاریخچهٔ گفتگو و بازخورد ساختاریافته","گروه خصوصی اعضا","جلسهٔ گروهی ماهانهٔ پرسش‌وپاسخ","چالش تمرینی ماهانه","تخفیف منتورینگ خصوصی"]},
-  {name:"طلا",slug:"gold",price:"۶٫۵",desc:"انتخاب جدی برای تغییر",popular:true,items:["تمام امکانات نقره","مربی AI سناریومحور، ماهانه ۱۵۰ پیام","تاریخچه و ریست گفتگوهای مربی","جلسهٔ گروهی تخصصی ماهانه","بررسی محدود تمرین‌ها توسط منتور","برنامهٔ پیشنهادی ماهانه","جلسهٔ خصوصی ۳۰ دقیقه‌ای","بازخورد ویدیوی تمرین"]},
+  {name:"برنز",slug:"bronze",price:"۲٫۵",desc:"شروع اصولی و مستقل",items:["ورود امن با OTP و حساب پایدار","ارزیابی اولیهٔ CLEAR و پیشنهاد مسیر شروع","دسترسی کامل به دوره","کتابخانهٔ درس‌های مرحله‌ای","تمرین‌های عملی هر درس","داشبورد پیشرفت، streak و تاریخچه"]},
+  {name:"نقره",slug:"silver",price:"۳٫۵",desc:"تمرین با همراهی بیشتر",items:["تمام امکانات برنز","مربی AI سناریومحور، روزانه ۳۰ پیام","تاریخچهٔ گفتگو و بازخورد ساختاریافته","گروه خصوصی اعضا","جلسهٔ گروهی ماهانهٔ پرسش‌وپاسخ","چالش تمرینی ماهانه","تخفیف منتورینگ خصوصی"]},
+  {name:"طلا",slug:"gold",price:"۶٫۵",desc:"انتخاب جدی برای تغییر",popular:true,items:["تمام امکانات نقره","مربی AI سناریومحور، روزانه ۱۵۰ پیام","تاریخچه و ریست گفتگوهای مربی","جلسهٔ گروهی تخصصی ماهانه","بررسی محدود تمرین‌ها توسط منتور","برنامهٔ پیشنهادی ماهانه","جلسهٔ خصوصی ۳۰ دقیقه‌ای","بازخورد ویدیوی تمرین"]},
   {name:"الماس",slug:"diamond",price:"۱۰",desc:"مسیر کاملاً اختصاصی",items:["تمام امکانات طلا","مربی AI نامحدود با بازخورد ساختاریافته","فعال‌سازی و تمدید یک‌ماهه","۲ جلسهٔ خصوصی ۶۰ تا ۹۰ دقیقه‌ای","برنامهٔ کاملاً شخصی‌سازی‌شدهٔ ماهانه","بازخورد هفتگی تمرین‌ها","بررسی صوت یا ویدیو","پشتیبانی اولویت‌دار","ارزیابی پایان ماه"]},
 ];
 const planComparison = [
@@ -506,7 +506,7 @@ const planComparison = [
   ["کتابخانهٔ درس‌های مرحله‌ای", "دارد", "دارد", "دارد"],
   ["تمرین و ثبت تکمیل درس", "دارد", "دارد", "دارد"],
   ["داشبورد پیشرفت، streak و تاریخچه", "دارد", "دارد", "دارد"],
-  ["مربی AI سناریومحور", "۳۰ پیام ماهانه", "۱۵۰ پیام ماهانه", "نامحدود"],
+  ["مربی AI سناریومحور", "۳۰ پیام روزانه", "۱۵۰ پیام روزانه", "نامحدود"],
   ["بازخورد ساختاریافتهٔ مربی", "دارد", "دارد", "دارد"],
   ["تاریخچه و ریست گفت‌وگو", "دارد", "دارد", "دارد"],
   ["فعال‌سازی و تمدید یک‌ماهه", "دارد", "دارد", "دارد"],

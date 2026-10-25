@@ -125,7 +125,7 @@ export type CoachFeedback = {
   alternative: string;
 };
 
-export type CoachQuota = { allowed: boolean; remaining: number | null; monthly_limit: number | null };
+export type CoachQuota = { allowed: boolean; remaining: number | null; daily_limit: number | null };
 
 export type CoachReply = { content: string; feedback?: CoachFeedback; quota?: CoachQuota };
 
@@ -143,7 +143,7 @@ export async function requestCoachReply(session: AuthSession, scenario: { title:
     body: JSON.stringify({ scenario, messages }),
   });
   if (!response.ok) {
-    if (response.status === 429) throw new Error("سهمیهٔ ماهانهٔ مربی تو تمام شده است.");
+    if (response.status === 429) throw new Error("سهمیهٔ روزانهٔ مربی تو تمام شده است.");
     throw new Error(response.status === 503 ? "مربی هنوز آماده نشده است." : "پاسخ مربی دریافت نشد. دوباره تلاش کن.");
   }
   const payload = await response.json() as CoachReply;
@@ -162,7 +162,7 @@ export async function getCoachQuota(session: AuthSession) {
   });
   if (!response.ok) throw new Error("دریافت سهمیهٔ مربی انجام نشد.");
   const quota = await response.json() as CoachQuota[];
-  return quota[0] || { allowed: false, remaining: 0, monthly_limit: 0 };
+  return quota[0] || { allowed: false, remaining: 0, daily_limit: 0 };
 }
 
 export async function getCoachConversation(session: AuthSession, scenarioKey: string) {

@@ -20,7 +20,7 @@ type CoachFeedback = {
 type CoachQuota = {
   allowed: boolean;
   remaining: number | null;
-  monthly_limit: number | null;
+  daily_limit: number | null;
 };
 
 type CoachResponse = {
