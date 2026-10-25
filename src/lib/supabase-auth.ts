@@ -196,6 +196,37 @@ export async function saveCoachMessage(session: AuthSession, conversationId: str
   });
 }
 
+export async function activateDemoPlan(session: AuthSession, planSlug: string) {
+  const { anonKey } = requireConfig();
+  const response = await fetch(endpoint("/rest/v1/rpc/activate_demo_plan"), {
+    method: "POST",
+    headers: { apikey: anonKey, Authorization: `Bearer ${session.access_token}`, "Content-Type": "application/json" },
+    body: JSON.stringify({ requested_plan_slug: planSlug }),
+  });
+  if (!response.ok) throw new Error("ثبت پلن انجام نشد. دوباره تلاش کن.");
+  const result = await response.json() as Array<{ order_id: string; plan_name: string }>;
+  if (!result[0]) throw new Error("ثبت پلن انجام نشد. دوباره تلاش کن.");
+  return result[0];
+}
+
+export type PurchaseRecord = {
+  id: string;
+  amount_toman: number;
+  status: "pending" | "paid" | "failed" | "refunded";
+  gateway: string | null;
+  created_at: string;
+  plans: { name: string } | null;
+};
+
+export async function getPurchaseHistory(session: AuthSession) {
+  const { anonKey } = requireConfig();
+  const response = await fetch(endpoint(`/rest/v1/orders?user_id=eq.${encodeURIComponent(session.user.id)}&select=id,amount_toman,status,gateway,created_at,plans(name)&order=created_at.desc`), {
+    headers: { apikey: anonKey, Authorization: `Bearer ${session.access_token}` },
+  });
+  if (!response.ok) throw new Error("دریافت سوابق خرید انجام نشد.");
+  return await response.json() as PurchaseRecord[];
+}
+
 export async function deleteAccount(session: AuthSession) {
   const { anonKey } = requireConfig();
   const response = await fetch(endpoint("/rest/v1/rpc/delete_my_account"), {

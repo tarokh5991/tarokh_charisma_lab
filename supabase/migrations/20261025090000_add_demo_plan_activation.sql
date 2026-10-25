@@ -1,0 +1,40 @@
+create or replace function public.activate_demo_plan(requested_plan_slug text)
+returns table (order_id uuid, plan_name text)
+language plpgsql
+security definer
+set search_path = public
+as $$
+declare
+  selected_plan public.plans%rowtype;
+  created_order_id uuid;
+begin
+  if auth.uid() is null then
+    raise exception 'unauthorized';
+  end if;
+
+  select * into selected_plan
+  from public.plans
+  where slug = requested_plan_slug and is_active
+  limit 1;
+
+  if selected_plan.id is null then
+    raise exception 'plan_not_found';
+  end if;
+
+  update public.entitlements
+  set status = 'expired', ends_at = now()
+  where user_id = auth.uid() and status = 'active';
+
+  insert into public.orders (user_id, plan_id, amount_toman, status, gateway, gateway_reference)
+  values (auth.uid(), selected_plan.id, selected_plan.price_toman, 'paid', 'demo', 'demo-' || gen_random_uuid()::text)
+  returning id into created_order_id;
+
+  insert into public.entitlements (user_id, plan_id, status, starts_at)
+  values (auth.uid(), selected_plan.id, 'active', now());
+
+  return query select created_order_id, selected_plan.name;
+end;
+$$;
+
+revoke all on function public.activate_demo_plan(text) from public;
+grant execute on function public.activate_demo_plan(text) to authenticated;

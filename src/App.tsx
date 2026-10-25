@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { completeExercise, completeLesson, createCoachConversation, deleteAccount, deleteCoachConversation, getActivePlan, getCoachConversation, getCoachMessages, getLatestAssessment, getLessonProgress, getPublishedLessons, getStoredSession, getUserProfile, requestCoachReply, requestOtp, restoreSession, saveAssessment, saveCoachMessage, saveSession, signOut, updateUserProfile, verifyOtp, type AuthSession, type CoachMessage, type PublishedLesson, type UserProfile } from "./lib/supabase-auth";
+import { activateDemoPlan, completeExercise, completeLesson, createCoachConversation, deleteAccount, deleteCoachConversation, getActivePlan, getCoachConversation, getCoachMessages, getLatestAssessment, getLessonProgress, getPublishedLessons, getPurchaseHistory, getStoredSession, getUserProfile, requestCoachReply, requestOtp, restoreSession, saveAssessment, saveCoachMessage, saveSession, signOut, updateUserProfile, verifyOtp, type AuthSession, type CoachMessage, type PublishedLesson, type PurchaseRecord, type UserProfile } from "./lib/supabase-auth";
 
 type Page = "home" | "about" | "auth" | "dashboard" | "library" | "lesson" | "coach" | "pricing" | "checkout" | "profile";
 
@@ -317,6 +317,8 @@ function Profile({ go, session, profile, activePlan, onUpdateUsername, onDeleteA
   const [username,setUsername]=useState(displayName==="ثبت نشده"?"":displayName);
   const [saving,setSaving]=useState(false);
   const [message,setMessage]=useState("");
+  const [purchases,setPurchases]=useState<PurchaseRecord[]>([]);
+  useEffect(()=>{ getPurchaseHistory(session).then(setPurchases).catch(()=>setPurchases([])); },[session]);
   const saveUsername=async()=>{
     if(!username.trim()) return;
     setSaving(true); setMessage("");
@@ -331,7 +333,7 @@ function Profile({ go, session, profile, activePlan, onUpdateUsername, onDeleteA
   return <><Header go={go} {...auth}/><main className="app-page profile-page">
     <button className="back" onClick={()=>go("dashboard")}><Icon name="arrow"/> بازگشت به داشبورد</button>
     <div className="profile-heading"><span className="eyebrow">حساب کاربری</span><h1>پروفایل من</h1><p>اطلاعات حساب و وضعیت عضویت تو</p></div>
-    <section className="profile-card"><div className="profile-avatar">{displayName.slice(0,1)}</div><div className="profile-details"><div className="username-field"><span>نام کاربری</span>{editing?<div className="username-editor"><input value={username} onChange={event=>setUsername(event.target.value)} dir="auto" autoComplete="username" aria-label="نام کاربری"/><Button onClick={saveUsername} disabled={saving||!username.trim()}>{saving?"در حال ذخیره…":"ذخیره"}</Button><button className="cancel-edit" onClick={()=>{setEditing(false);setUsername(displayName);setMessage("")}}>انصراف</button></div>:<div className="username-value"><strong>{displayName}</strong><button className="edit-username" aria-label="ویرایش نام کاربری" onClick={()=>{setUsername(displayName==="ثبت نشده"?"":displayName);setEditing(true);setMessage("")}}><Icon name="edit"/></button></div>}{message&&<small className="profile-message">{message}</small>}</div><div><span>ایمیل یا شماره موبایل</span><strong dir="ltr">{contact}</strong></div><div><span>نقش حساب</span><strong>{roleLabels[profile?.role || "learner"]}</strong></div><div><span>پلن فعال</span><strong>{activePlan || "بدون پلن فعال"}</strong></div><div><span>وضعیت نشست</span><strong className="profile-status">فعال</strong></div></div></section><div className="account-actions-mobile"><button className="logout-account" onClick={onLogout}>خروج</button><button className="delete-account" onClick={async()=>{if(!window.confirm("حساب و تمام داده‌های آن برای همیشه حذف می‌شوند. ادامه می‌دهی؟")) return; try { await onDeleteAccount(); } catch(error) { setMessage(error instanceof Error ? error.message : "حذف حساب انجام نشد."); }}}>حذف حساب</button></div>
+    <section className="profile-card"><div className="profile-avatar">{displayName.slice(0,1)}</div><div className="profile-details"><div className="username-field"><span>نام کاربری</span>{editing?<div className="username-editor"><input value={username} onChange={event=>setUsername(event.target.value)} dir="auto" autoComplete="username" aria-label="نام کاربری"/><Button onClick={saveUsername} disabled={saving||!username.trim()}>{saving?"در حال ذخیره…":"ذخیره"}</Button><button className="cancel-edit" onClick={()=>{setEditing(false);setUsername(displayName);setMessage("")}}>انصراف</button></div>:<div className="username-value"><strong>{displayName}</strong><button className="edit-username" aria-label="ویرایش نام کاربری" onClick={()=>{setUsername(displayName==="ثبت نشده"?"":displayName);setEditing(true);setMessage("")}}><Icon name="edit"/></button></div>}{message&&<small className="profile-message">{message}</small>}</div><div><span>ایمیل یا شماره موبایل</span><strong dir="ltr">{contact}</strong></div><div><span>نقش حساب</span><strong>{roleLabels[profile?.role || "learner"]}</strong></div><div><span>پلن فعال</span><strong>{activePlan || "بدون پلن فعال"}</strong></div><div><span>وضعیت نشست</span><strong className="profile-status">فعال</strong></div></div></section><section className="purchase-history"><div className="section-head"><h3>سوابق خرید</h3><span className="demo-badge">پرداخت نمایشی</span></div>{purchases.length===0?<p>هنوز سفارشی ثبت نشده است.</p>:purchases.map(purchase=><div className="purchase-row" key={purchase.id}><div><strong>پلن {purchase.plans?.name || "نامشخص"}</strong><span>{purchase.gateway==="demo"?"ثبت آزمایشی":"پرداخت"}</span></div><time>{new Date(purchase.created_at).toLocaleDateString("fa-IR")}</time></div>)}</section><div className="account-actions-mobile"><button className="logout-account" onClick={onLogout}>خروج</button><button className="delete-account" onClick={async()=>{if(!window.confirm("حساب و تمام داده‌های آن برای همیشه حذف می‌شوند. ادامه می‌دهی؟")) return; try { await onDeleteAccount(); } catch(error) { setMessage(error instanceof Error ? error.message : "حذف حساب انجام نشد."); }}}>حذف حساب</button></div>
   </main><BottomNav page="profile" go={go}/></>;
 }
 
@@ -473,19 +475,31 @@ function Coach({ go, session, initialScenario, ...auth }: { go: (p: Page) => voi
 }
 
 const plans = [
-  {name:"برنز",price:"۱٫۲",desc:"شروع اصولی و مستقل",items:["دسترسی کامل به دوره","تمرین‌های عملی هر درس"]},
-  {name:"نقره",price:"۱٫۹",desc:"تمرین با همراهی بیشتر",items:["تمام امکانات برنز","گروه خصوصی اعضا","مربی هوش مصنوعی محدود"]},
-  {name:"طلا",price:"۳",desc:"انتخاب جدی برای تغییر",popular:true,items:["تمام امکانات نقره","هوش مصنوعی گسترده","منتورینگ ماهانه نیمه‌خصوصی","بازخورد ویدیوی تمرین"]},
-  {name:"الماس",price:"۸",desc:"مسیر کاملاً اختصاصی",items:["تمام امکانات طلا","هوش مصنوعی نامحدود","منتورینگ ماهانه خصوصی"]},
+  {name:"برنز",slug:"bronze",price:"۱٫۲",desc:"شروع اصولی و مستقل",items:["دسترسی کامل به دوره","تمرین‌های عملی هر درس"]},
+  {name:"نقره",slug:"silver",price:"۱٫۹",desc:"تمرین با همراهی بیشتر",items:["تمام امکانات برنز","گروه خصوصی اعضا","مربی هوش مصنوعی محدود"]},
+  {name:"طلا",slug:"gold",price:"۳",desc:"انتخاب جدی برای تغییر",popular:true,items:["تمام امکانات نقره","هوش مصنوعی گسترده","منتورینگ ماهانه نیمه‌خصوصی","بازخورد ویدیوی تمرین"]},
+  {name:"الماس",slug:"diamond",price:"۸",desc:"مسیر کاملاً اختصاصی",items:["تمام امکانات طلا","هوش مصنوعی نامحدود","منتورینگ ماهانه خصوصی"]},
 ];
 function Pricing({ go, choose, ...auth }: { go: (p: Page) => void; choose: (p: string) => void } & HeaderProps) {
   return <><Header go={go} {...auth}/><main className="pricing-page"><div className="section-title"><span>سرمایه‌گذاری روی خودت</span><h2>پلن مناسب مسیرت را انتخاب کن</h2><p>همه پلن‌ها دسترسی دائمی به محتوای آموزشی دارند.</p></div><div className="plans">{plans.map(p=><div className={`plan ${p.popular?"gold":""}`} key={p.name}>{p.popular&&<span className="popular">محبوب‌ترین</span>}<span>{p.name}</span><h3>{p.price}<small> میلیون تومان</small></h3><p>{p.desc}</p><Button block ghost={!p.popular} onClick={()=>{choose(p.name);go("checkout")}}>انتخاب {p.name}</Button><ul>{p.items.map(x=><li key={x}><Icon name="check"/>{x}</li>)}</ul></div>)}</div></main></>;
 }
 
-function Checkout({ go, plan, ...auth }: { go:(p:Page)=>void; plan:string } & HeaderProps) {
+function Checkout({ go, plan, session, onActivated, ...auth }: { go:(p:Page)=>void; plan:string; session: AuthSession; onActivated: (planName: string) => void } & HeaderProps) {
   const data=plans.find(p=>p.name===plan) || plans[2];
-  const [paid,setPaid]=useState(false);
-  return <><Header go={go} simple {...auth}/><main className="center-page">{paid?<div className="success"><div><Icon name="check"/></div><span className="eyebrow">پرداخت موفق</span><h2>به آزمایشگاه کاریزما خوش آمدی.</h2><p>پلن {data.name} برای تو فعال شد. اولین قدم مسیرت آماده است.</p><Button onClick={()=>go("dashboard")}>ورود به داشبورد <Icon name="arrow"/></Button></div>:<div className="checkout"><div><button className="back" onClick={()=>go("pricing")}><Icon name="arrow"/> بازگشت</button><span className="eyebrow">تکمیل ثبت‌نام</span><h2>اطلاعات پرداخت</h2><label>نام و نام خانوادگی<input placeholder="نام کامل"/></label><label>شماره موبایل<input dir="ltr" placeholder="09 — — — — — — — — —"/></label><div className="secure"><Icon name="lock"/> پرداخت امن از طریق درگاه بانکی</div></div><aside><span>خلاصه سفارش</span><h3>پلن {data.name}</h3><ul>{data.items.map(x=><li key={x}><Icon name="check"/>{x}</li>)}</ul><div className="total"><span>مبلغ نهایی</span><b>{data.price} میلیون تومان</b></div><Button block onClick={()=>setPaid(true)}>پرداخت و شروع مسیر</Button></aside></div>}</main></>;
+  const [activated,setActivated]=useState(false);
+  const [busy,setBusy]=useState(false);
+  const [message,setMessage]=useState("");
+  const activate=async()=>{
+    setBusy(true); setMessage("");
+    try {
+      const result=await activateDemoPlan(session,data.slug);
+      onActivated(result.plan_name);
+      setActivated(true);
+    } catch(error) {
+      setMessage(error instanceof Error ? error.message : "ثبت پلن انجام نشد. دوباره تلاش کن.");
+    } finally { setBusy(false); }
+  };
+  return <><Header go={go} simple {...auth}/><main className="center-page">{activated?<div className="success"><div><Icon name="check"/></div><span className="eyebrow">ثبت نمایشی موفق</span><h2>پلن {data.name} برای تو فعال شد.</h2><p>هیچ مبلغی دریافت نشد؛ این ثبت برای آزمایش مسیر خرید انجام شد.</p><Button onClick={()=>go("dashboard")}>ورود به داشبورد <Icon name="arrow"/></Button></div>:<div className="checkout"><div><button className="back" onClick={()=>go("pricing")}><Icon name="arrow"/> بازگشت</button><span className="eyebrow">ثبت آزمایشی پلن</span><h2>فعال‌سازی نمایشی</h2><p className="demo-notice">درگاه بانکی هنوز متصل نیست. این دکمه فقط سفارش آزمایشی و دسترسی پلن را ثبت می‌کند.</p><div className="secure"><Icon name="check"/> بدون پرداخت واقعی</div></div><aside><span>خلاصه انتخاب</span><h3>پلن {data.name}</h3><p>{data.desc}</p><ul>{data.items.map(x=><li key={x}><Icon name="check"/>{x}</li>)}</ul><div className="total"><span>مبلغ نمایشی</span><b>{data.price} میلیون تومان</b></div><Button block onClick={activate} disabled={busy}>{busy?"در حال ثبت…":"ثبت پلن به‌صورت نمایشی"}</Button>{message&&<p className="auth-message">{message}</p>}</aside></div>}</main></>;
 }
 
 export default function App() {
@@ -556,6 +570,9 @@ export default function App() {
     getUserProfile(nextSession).then(setProfile).catch(()=>setProfile(null));
     getActivePlan(nextSession).then(setActivePlan).catch(()=>setActivePlan(null));
   };
+  const activatePlan=(planName:string)=>{
+    setActivePlan(planName);
+  };
   const updateUsername=async(username:string)=>{
     if(!session) return;
     const updatedProfiles=await updateUserProfile(session, username);
@@ -582,5 +599,5 @@ export default function App() {
   const displayName=profile?.username || profile?.display_name || session?.user.user_metadata?.username || session?.user.user_metadata?.display_name;
   const visiblePage=!session && protectedPages.includes(page)?"auth":page;
   const headerAuth={authenticated:Boolean(session),displayName,onLogout:logout};
-  return <div dir="rtl">{visiblePage==="home"?<Home go={go} {...headerAuth}/>:visiblePage==="about"?<About go={go} {...headerAuth}/>:visiblePage==="auth"?<Auth go={go} onAuthenticated={authenticated}/>:visiblePage==="dashboard"?<Dashboard go={go} displayName={displayName} onLogout={logout} session={session!} onOpenLesson={openLesson}/>:visiblePage==="library"?<Library go={go} onOpenLesson={openLesson} session={session!} {...headerAuth}/>:visiblePage==="profile"?<Profile go={go} session={session!} profile={profile} activePlan={activePlan} onUpdateUsername={updateUsername} onDeleteAccount={removeAccount} {...headerAuth}/>:visiblePage==="lesson"?<Lesson go={go} lesson={activeLesson} session={session!} onOpenCoach={openCoach} {...headerAuth}/>:visiblePage==="coach"?<Coach go={go} session={session!} initialScenario={activeCoachScenario} {...headerAuth}/>:visiblePage==="pricing"?<Pricing go={go} choose={setPlan} {...headerAuth}/>:<Checkout go={go} plan={plan} {...headerAuth}/>}<SupportWidget showButton={visiblePage==="home"||visiblePage==="dashboard"}/></div>;
+  return <div dir="rtl">{visiblePage==="home"?<Home go={go} {...headerAuth}/>:visiblePage==="about"?<About go={go} {...headerAuth}/>:visiblePage==="auth"?<Auth go={go} onAuthenticated={authenticated}/>:visiblePage==="dashboard"?<Dashboard go={go} displayName={displayName} onLogout={logout} session={session!} onOpenLesson={openLesson}/>:visiblePage==="library"?<Library go={go} onOpenLesson={openLesson} session={session!} {...headerAuth}/>:visiblePage==="profile"?<Profile go={go} session={session!} profile={profile} activePlan={activePlan} onUpdateUsername={updateUsername} onDeleteAccount={removeAccount} {...headerAuth}/>:visiblePage==="lesson"?<Lesson go={go} lesson={activeLesson} session={session!} onOpenCoach={openCoach} {...headerAuth}/>:visiblePage==="coach"?<Coach go={go} session={session!} initialScenario={activeCoachScenario} {...headerAuth}/>:visiblePage==="pricing"?<Pricing go={go} choose={setPlan} {...headerAuth}/>:<Checkout go={go} plan={plan} session={session!} onActivated={activatePlan} {...headerAuth}/>}<SupportWidget showButton={visiblePage==="home"||visiblePage==="dashboard"}/></div>;
 }
