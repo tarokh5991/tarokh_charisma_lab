@@ -496,13 +496,26 @@ function Coach({ go, session, initialScenario, ...auth }: { go: (p: Page) => voi
 
 const plans = [
   {name:"برنز",slug:"bronze",price:"۲٫۵",desc:"شروع اصولی و مستقل",items:["دسترسی کامل به دوره","تمرین‌های عملی هر درس"]},
-  {name:"نقره",slug:"silver",price:"۳٫۵",desc:"تمرین با همراهی بیشتر",items:["تمام امکانات برنز","گروه خصوصی اعضا","مربی هوش مصنوعی محدود"]},
-  {name:"طلا",slug:"gold",price:"۶٫۵",desc:"انتخاب جدی برای تغییر",popular:true,items:["تمام امکانات نقره","هوش مصنوعی گسترده","منتورینگ ماهانه نیمه‌خصوصی","بازخورد ویدیوی تمرین"]},
-  {name:"الماس",slug:"diamond",price:"۱۰",desc:"مسیر کاملاً اختصاصی",items:["تمام امکانات طلا","هوش مصنوعی نامحدود","منتورینگ ماهانه خصوصی"]},
+  {name:"نقره",slug:"silver",price:"۳٫۵",desc:"تمرین با همراهی بیشتر",items:["تمام امکانات برنز","گروه خصوصی اعضا","مربی هوش مصنوعی محدود","جلسهٔ گروهی ماهانهٔ پرسش‌وپاسخ","چالش تمرینی ماهانه","تخفیف منتورینگ خصوصی"]},
+  {name:"طلا",slug:"gold",price:"۶٫۵",desc:"انتخاب جدی برای تغییر",popular:true,items:["تمام امکانات نقره","هوش مصنوعی گسترده","جلسهٔ گروهی تخصصی ماهانه","بررسی محدود تمرین‌ها توسط منتور","برنامهٔ پیشنهادی ماهانه","جلسهٔ خصوصی ۳۰ دقیقه‌ای","بازخورد ویدیوی تمرین"]},
+  {name:"الماس",slug:"diamond",price:"۱۰",desc:"مسیر کاملاً اختصاصی",items:["تمام امکانات طلا","هوش مصنوعی نامحدود","۲ جلسهٔ خصوصی ۶۰ تا ۹۰ دقیقه‌ای","برنامهٔ کاملاً شخصی‌سازی‌شدهٔ ماهانه","بازخورد هفتگی تمرین‌ها","بررسی صوت یا ویدیو","پشتیبانی اولویت‌دار","ارزیابی پایان ماه"]},
+];
+const planComparison = [
+  ["دسترسی کامل به دوره", "دارد", "دارد", "دارد"],
+  ["مربی هوش مصنوعی", "محدود", "گسترده", "نامحدود"],
+  ["گروه خصوصی اعضا", "دارد", "دارد", "دارد"],
+  ["جلسهٔ گروهی ماهانه", "پرسش‌وپاسخ", "تخصصی", "تخصصی و اولویت‌دار"],
+  ["چالش تمرینی ماهانه", "دارد", "دارد", "دارد"],
+  ["بررسی تمرین توسط منتور", "—", "محدود", "هفتگی"],
+  ["برنامهٔ شخصی‌سازی‌شده", "—", "پیشنهادی", "کامل و ماهانه"],
+  ["جلسهٔ خصوصی منتورینگ", "—", "۳۰ دقیقه در ماه", "۲ جلسهٔ ۶۰ تا ۹۰ دقیقه‌ای"],
+  ["بررسی صوت یا ویدیو", "—", "محدود", "دارد"],
+  ["پشتیبانی اولویت‌دار", "—", "—", "دارد"],
+  ["ارزیابی پایان ماه", "—", "—", "دارد"],
 ];
 function Pricing({ go, choose, activePlan, ...auth }: { go: (p: Page) => void; choose: (p: string) => void; activePlan: ActivePlan | null } & HeaderProps) {
   const remainingDays=activePlan?Math.max(0,Math.ceil((new Date(activePlan.ends_at).getTime()-Date.now())/86400000)):0;
-  return <><Header go={go} {...auth}/><main className="pricing-page"><div className="section-title"><span>سرمایه‌گذاری روی خودت</span><h2>پلن مناسب مسیرت را انتخاب کن</h2><p>همهٔ پلن‌ها یک ماه اعتبار دارند و پس از پایان ماه نیاز به تمدید دارند.</p></div>{activePlan&&<section className="renewal-card"><div><span className="eyebrow">پلن فعلی تو</span><h3>پلن {activePlan.name}</h3><p>{remainingDays} روز از اعتبار پلنت باقی مانده است.</p></div><Button onClick={()=>{choose(activePlan.name);go("checkout")}}>تمدید پلن</Button></section>}<div className="plans">{plans.map(p=><div className={`plan ${p.popular?"gold":""}`} key={p.name}>{p.popular&&<span className="popular">محبوب‌ترین</span>}<span>{p.name}</span><h3>{p.price}<small> میلیون تومان</small></h3><p>{p.desc}</p><Button block ghost={!p.popular} onClick={()=>{choose(p.name);go("checkout")}}>انتخاب {p.name}</Button><ul>{p.items.map(x=><li key={x}><Icon name="check"/>{x}</li>)}</ul></div>)}</div></main></>;
+  return <><Header go={go} {...auth}/><main className="pricing-page"><div className="section-title"><span>سرمایه‌گذاری روی خودت</span><h2>پلن مناسب مسیرت را انتخاب کن</h2><p>همهٔ پلن‌ها یک ماه اعتبار دارند و پس از پایان ماه نیاز به تمدید دارند.</p></div>{activePlan&&<section className="renewal-card"><div><span className="eyebrow">پلن فعلی تو</span><h3>پلن {activePlan.name}</h3><p>{remainingDays} روز از اعتبار پلنت باقی مانده است.</p></div><Button onClick={()=>{choose(activePlan.name);go("checkout")}}>تمدید پلن</Button></section>}<div className="plans">{plans.map(p=><div className={`plan ${p.popular?"gold":""}`} key={p.name}>{p.popular&&<span className="popular">محبوب‌ترین</span>}<span>{p.name}</span><h3>{p.price}<small> میلیون تومان</small></h3><p>{p.desc}</p><Button block ghost={!p.popular} onClick={()=>{choose(p.name);go("checkout")}}>انتخاب {p.name}</Button><ul>{p.items.map(x=><li key={x}><Icon name="check"/>{x}</li>)}</ul></div>)}</div><section className="plan-comparison"><div className="section-title"><span>مقایسهٔ امکانات</span><h2>کدام پلن برای تو مناسب‌تر است؟</h2><p>تفاوت خدمات نقره، طلا و الماس را کنار هم ببین.</p></div><div className="comparison-scroll"><table><thead><tr><th>امکانات</th><th>نقره</th><th>طلا</th><th>الماس</th></tr></thead><tbody>{planComparison.map(row=><tr key={row[0]}>{row.map((value,index)=>index===0?<th scope="row" key={value}>{value}</th>:<td key={`${row[0]}-${value}`}>{value}</td>)}</tr>)}</tbody></table></div></section></main></>;
 }
 
 function Checkout({ go, plan, session, onActivated, ...auth }: { go:(p:Page)=>void; plan:string; session: AuthSession; onActivated: () => Promise<void> } & HeaderProps) {
