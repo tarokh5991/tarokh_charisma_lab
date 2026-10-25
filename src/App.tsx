@@ -495,10 +495,10 @@ function Coach({ go, session, initialScenario, ...auth }: { go: (p: Page) => voi
 }
 
 const plans = [
-  {name:"برنز",slug:"bronze",price:"۱٫۲",desc:"شروع اصولی و مستقل",items:["دسترسی کامل به دوره","تمرین‌های عملی هر درس"]},
-  {name:"نقره",slug:"silver",price:"۱٫۹",desc:"تمرین با همراهی بیشتر",items:["تمام امکانات برنز","گروه خصوصی اعضا","مربی هوش مصنوعی محدود"]},
-  {name:"طلا",slug:"gold",price:"۳",desc:"انتخاب جدی برای تغییر",popular:true,items:["تمام امکانات نقره","هوش مصنوعی گسترده","منتورینگ ماهانه نیمه‌خصوصی","بازخورد ویدیوی تمرین"]},
-  {name:"الماس",slug:"diamond",price:"۸",desc:"مسیر کاملاً اختصاصی",items:["تمام امکانات طلا","هوش مصنوعی نامحدود","منتورینگ ماهانه خصوصی"]},
+  {name:"برنز",slug:"bronze",price:"۲٫۵",desc:"شروع اصولی و مستقل",items:["دسترسی کامل به دوره","تمرین‌های عملی هر درس"]},
+  {name:"نقره",slug:"silver",price:"۳٫۵",desc:"تمرین با همراهی بیشتر",items:["تمام امکانات برنز","گروه خصوصی اعضا","مربی هوش مصنوعی محدود"]},
+  {name:"طلا",slug:"gold",price:"۶٫۵",desc:"انتخاب جدی برای تغییر",popular:true,items:["تمام امکانات نقره","هوش مصنوعی گسترده","منتورینگ ماهانه نیمه‌خصوصی","بازخورد ویدیوی تمرین"]},
+  {name:"الماس",slug:"diamond",price:"۱۰",desc:"مسیر کاملاً اختصاصی",items:["تمام امکانات طلا","هوش مصنوعی نامحدود","منتورینگ ماهانه خصوصی"]},
 ];
 function Pricing({ go, choose, activePlan, ...auth }: { go: (p: Page) => void; choose: (p: string) => void; activePlan: ActivePlan | null } & HeaderProps) {
   const remainingDays=activePlan?Math.max(0,Math.ceil((new Date(activePlan.ends_at).getTime()-Date.now())/86400000)):0;
