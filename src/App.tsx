@@ -49,13 +49,18 @@ const Button = ({ children, onClick, ghost = false, block = false, disabled = fa
 
 type HeaderProps = { authenticated?: boolean; displayName?: string; onLogout?: () => void };
 
-const Header = ({ go, simple = false, authenticated = false, displayName, onLogout }: { go: (p: Page) => void; simple?: boolean } & HeaderProps) => (
-  <header className="header">
-    <button className="brand" onClick={() => go("home")}><span>TAROKH</span><small>CHARISMA LAB</small></button>
-    {!simple && <nav><button onClick={() => go("home")}>خانه</button><button onClick={() => go("dashboard")}>آکادمی</button><button onClick={() => go("coach")}>مربی AI</button><button onClick={() => go("pricing")}>پلن‌ها</button><button onClick={() => go("about")}>درباره ما</button><button onClick={() => window.dispatchEvent(new Event("open-support"))}>پشتیبانی</button></nav>}
-    {authenticated ? <div className="account-actions"><button className="header-user" onClick={() => go("profile")}>{displayName || "حساب من"}</button><Button onClick={onLogout} ghost>خروج</Button></div> : <Button onClick={() => go("auth")} ghost>ورود / ثبت‌نام</Button>}
-  </header>
-);
+const Header = ({ go, simple = false, authenticated = false, displayName, onLogout }: { go: (p: Page) => void; simple?: boolean } & HeaderProps) => {
+  const [menuOpen,setMenuOpen]=useState(false);
+  const navigate=(page:Page)=>{setMenuOpen(false);go(page)};
+  const openSupport=()=>{setMenuOpen(false);window.dispatchEvent(new Event("open-support"))};
+  return <header className="header">
+    <button className="brand" onClick={() => navigate("home")}><span>TAROKH</span><small>CHARISMA LAB</small></button>
+    {!simple && <nav><button onClick={() => navigate("home")}>خانه</button><button onClick={() => navigate("dashboard")}>آکادمی</button><button onClick={() => navigate("coach")}>مربی AI</button><button onClick={() => navigate("pricing")}>پلن‌ها</button><button onClick={() => navigate("about")}>درباره ما</button><button onClick={openSupport}>پشتیبانی</button></nav>}
+    {!simple && <button className="menu-toggle" aria-label="باز کردن منو" aria-expanded={menuOpen} onClick={()=>setMenuOpen(!menuOpen)}><span/><span/><span/></button>}
+    {!simple&&menuOpen&&<div className="mobile-menu"><button onClick={()=>navigate("home")}>خانه</button><button onClick={()=>navigate("dashboard")}>آکادمی</button><button onClick={()=>navigate("coach")}>مربی AI</button><button onClick={()=>navigate("pricing")}>پلن‌ها</button><button onClick={()=>navigate("about")}>درباره ما</button><button onClick={openSupport}>پشتیبانی</button>{authenticated?<><button onClick={()=>navigate("profile")}>حساب من{displayName?` · ${displayName}`:""}</button>{onLogout&&<button onClick={()=>{setMenuOpen(false);onLogout()}}>خروج</button>}</>:<button onClick={()=>navigate("auth")}>ورود / ثبت‌نام</button>}</div>}
+    {authenticated ? <div className="account-actions"><button className="header-user" onClick={() => navigate("profile")}>{displayName || "حساب من"}</button><Button onClick={onLogout} ghost>خروج</Button></div> : <Button onClick={() => navigate("auth")} ghost>ورود / ثبت‌نام</Button>}
+  </header>;
+};
 
 const BottomNav = ({ page, go }: { page: Page; go: (p: Page) => void }) => (
   <nav className="bottom-nav">
