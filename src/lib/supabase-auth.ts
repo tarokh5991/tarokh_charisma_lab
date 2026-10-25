@@ -91,15 +91,22 @@ export async function getUserProfile(session: AuthSession) {
   return profiles[0] || null;
 }
 
-export async function getActivePlan(session: AuthSession) {
+export type ActivePlan = {
+  name: string;
+  starts_at: string;
+  ends_at: string;
+};
+
+export async function getActivePlan(session: AuthSession): Promise<ActivePlan | null> {
   const { anonKey } = requireConfig();
   const currentTime = encodeURIComponent(new Date().toISOString());
-  const response = await fetch(endpoint(`/rest/v1/entitlements?user_id=eq.${encodeURIComponent(session.user.id)}&status=eq.active&ends_at=gt.${currentTime}&select=plans(name)&order=starts_at.desc&limit=1`), {
+  const response = await fetch(endpoint(`/rest/v1/entitlements?user_id=eq.${encodeURIComponent(session.user.id)}&status=eq.active&ends_at=gt.${currentTime}&select=starts_at,ends_at,plans(name)&order=starts_at.desc&limit=1`), {
     headers: { apikey: anonKey, Authorization: `Bearer ${session.access_token}` },
   });
   if (!response.ok) throw new Error("دریافت پلن فعال انجام نشد.");
-  const entitlements = await response.json() as Array<{ plans: { name: string } | null }>;
-  return entitlements[0]?.plans?.name || null;
+  const entitlements = await response.json() as Array<{ starts_at: string; ends_at: string; plans: { name: string } | null }>;
+  const entitlement = entitlements[0];
+  return entitlement?.plans?.name ? { name: entitlement.plans.name, starts_at: entitlement.starts_at, ends_at: entitlement.ends_at } : null;
 }
 
 export async function getLatestAssessment(session: AuthSession) {
