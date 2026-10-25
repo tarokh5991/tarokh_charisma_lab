@@ -531,8 +531,10 @@ export default function App() {
   const [activeLesson,setActiveLesson]=useState<PublishedLesson|null>(null);
   const [activeCoachScenario,setActiveCoachScenario]=useState<string|null>(null);
   const [activePlan,setActivePlan]=useState<string|null>(null);
+  const [planResolved,setPlanResolved]=useState(false);
   const [plan,setPlan]=useState("طلا");
   const protectedPages:Page[]=["dashboard","library","lesson","coach","checkout","profile"];
+  const planRequiredPages:Page[]=["dashboard","library","lesson","coach"];
   useEffect(()=>{
     let active=true;
     restoreSession().then(async restored=>{
@@ -540,7 +542,11 @@ export default function App() {
       setSession(restored);
       if(restored) {
         setProfile(await getUserProfile(restored).catch(()=>null));
-        setActivePlan(await getActivePlan(restored).catch(()=>null));
+        const restoredPlan=await getActivePlan(restored).catch(()=>null);
+        setActivePlan(restoredPlan);
+        setPlanResolved(true);
+      } else {
+        setPlanResolved(true);
       }
       if(!restored && page!=="home" && page!=="about" && page!=="pricing") { setPage("home"); window.location.hash="home"; }
     });
@@ -552,9 +558,10 @@ export default function App() {
       const nextSession=getStoredSession();
       setSession(nextSession);
       if(nextSession) {
+        setPlanResolved(false);
         getUserProfile(nextSession).then(setProfile).catch(()=>setProfile(null));
-        getActivePlan(nextSession).then(setActivePlan).catch(()=>setActivePlan(null));
-      } else { setProfile(null); setActivePlan(null); setPage("home"); window.location.hash="home"; }
+        getActivePlan(nextSession).then(planName=>{ setActivePlan(planName); setPlanResolved(true); }).catch(()=>{ setActivePlan(null); setPlanResolved(true); });
+      } else { setProfile(null); setActivePlan(null); setPlanResolved(true); setPage("home"); window.location.hash="home"; }
     };
     window.addEventListener("storage",syncSession);
     return ()=>window.removeEventListener("storage",syncSession);
@@ -575,10 +582,21 @@ export default function App() {
       setPage("auth");
       return;
     }
+    if(planRequiredPages.includes(nextPage) && planResolved && !activePlan){
+      window.location.hash="pricing";
+      setPage("pricing");
+      return;
+    }
     window.location.hash=nextPage;
     setPage(nextPage);
     window.scrollTo({top:0,behavior:"smooth"});
   };
+  useEffect(()=>{
+    if(session && planResolved && planRequiredPages.includes(page) && !activePlan){
+      window.location.hash="pricing";
+      setPage("pricing");
+    }
+  },[session,planResolved,activePlan,page]);
   const openLesson=(lesson:PublishedLesson)=>{
     setActiveLesson(lesson);
     go("lesson");
@@ -589,11 +607,13 @@ export default function App() {
   };
   const authenticated=(nextSession:AuthSession)=>{
     setSession(nextSession);
+    setPlanResolved(false);
     getUserProfile(nextSession).then(setProfile).catch(()=>setProfile(null));
-    getActivePlan(nextSession).then(setActivePlan).catch(()=>setActivePlan(null));
+    getActivePlan(nextSession).then(planName=>{ setActivePlan(planName); setPlanResolved(true); }).catch(()=>{ setActivePlan(null); setPlanResolved(true); });
   };
   const activatePlan=(planName:string)=>{
     setActivePlan(planName);
+    setPlanResolved(true);
   };
   const updateUsername=async(username:string)=>{
     if(!session) return;
@@ -608,6 +628,7 @@ export default function App() {
     setSession(null);
     setProfile(null);
     setActivePlan(null);
+    setPlanResolved(true);
     go("home");
   };
   const removeAccount=async()=>{
@@ -616,6 +637,7 @@ export default function App() {
     setSession(null);
     setProfile(null);
     setActivePlan(null);
+    setPlanResolved(true);
     go("home");
   };
   const displayName=profile?.username || profile?.display_name || session?.user.user_metadata?.username || session?.user.user_metadata?.display_name;
