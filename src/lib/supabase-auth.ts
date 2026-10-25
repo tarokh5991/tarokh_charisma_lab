@@ -196,12 +196,12 @@ export async function saveCoachMessage(session: AuthSession, conversationId: str
   });
 }
 
-export async function activateDemoPlan(session: AuthSession, planSlug: string) {
+export async function activateDemoPlan(session: AuthSession, planSlug: string, customerName: string) {
   const { anonKey } = requireConfig();
   const response = await fetch(endpoint("/rest/v1/rpc/activate_demo_plan"), {
     method: "POST",
     headers: { apikey: anonKey, Authorization: `Bearer ${session.access_token}`, "Content-Type": "application/json" },
-    body: JSON.stringify({ requested_plan_slug: planSlug }),
+    body: JSON.stringify({ requested_plan_slug: planSlug, customer_full_name: customerName.trim() }),
   });
   if (!response.ok) throw new Error("ثبت پلن انجام نشد. دوباره تلاش کن.");
   const result = await response.json() as Array<{ order_id: string; plan_name: string }>;
