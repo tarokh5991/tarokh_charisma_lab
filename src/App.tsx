@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { activateDemoPlan, completeExercise, completeLesson, createCoachConversation, deleteAccount, deleteCoachConversation, getActivePlan, getCoachConversation, getCoachMessages, getLatestAssessment, getLessonProgress, getPublishedLessons, getPurchaseHistory, getStoredSession, getUserProfile, requestCoachReply, requestOtp, restoreSession, saveAssessment, saveCoachMessage, saveSession, signOut, updateUserProfile, verifyOtp, type AuthSession, type CoachMessage, type PublishedLesson, type PurchaseRecord, type UserProfile } from "./lib/supabase-auth";
+import { activateDemoPlan, completeExercise, completeLesson, createCoachConversation, deleteAccount, deleteCoachConversation, getActivePlan, getCoachConversation, getCoachMessages, getCoachQuota, getLatestAssessment, getLessonProgress, getPublishedLessons, getPurchaseHistory, getStoredSession, getUserProfile, requestCoachReply, requestOtp, restoreSession, saveAssessment, saveCoachMessage, saveSession, signOut, updateUserProfile, verifyOtp, type AuthSession, type CoachMessage, type CoachQuota, type PublishedLesson, type PurchaseRecord, type UserProfile } from "./lib/supabase-auth";
 
 type Page = "home" | "about" | "auth" | "dashboard" | "library" | "lesson" | "coach" | "pricing" | "checkout" | "profile";
 
@@ -400,6 +400,7 @@ function Coach({ go, session, initialScenario, ...auth }: { go: (p: Page) => voi
   const [scenario,setScenario]=useState<keyof typeof scenarioData>(()=>initialScenario && initialScenario in scenarioData ? initialScenario as keyof typeof scenarioData : "آشنایی در جمع");
   const [draft,setDraft]=useState("");
   const [messages,setMessages]=useState<CoachMessage[]>([]);
+  const [quota,setQuota]=useState<CoachQuota|null>(null);
   const [conversationId,setConversationId]=useState<string|null>(null);
   const [loadingHistory,setLoadingHistory]=useState(true);
   const [sending,setSending]=useState(false);
@@ -412,6 +413,7 @@ function Coach({ go, session, initialScenario, ...auth }: { go: (p: Page) => voi
     setConversationId(null);
     setMessage("");
     setLoadingHistory(true);
+    getCoachQuota(session).then(setQuota).catch(()=>setQuota(null));
     getCoachConversation(session,scenario).then(async conversation=>{
       if(!active) return;
       if(!conversation) return;
@@ -445,7 +447,7 @@ function Coach({ go, session, initialScenario, ...auth }: { go: (p: Page) => voi
   };
   const send=async()=>{
     const content=draft.trim();
-    if(!content||sending||resetting||loadingHistory) return;
+    if(!content||sending||resetting||loadingHistory||Boolean(quota&&!quota.allowed)) return;
     setSending(true);
     setMessage("");
     try {
@@ -457,6 +459,7 @@ function Coach({ go, session, initialScenario, ...auth }: { go: (p: Page) => voi
       setMessages(nextMessages);
       setDraft("");
       const reply=await requestCoachReply(session,{title:scenario,context:scenarioData[scenario].context},nextMessages);
+      if(reply.quota) setQuota(reply.quota);
       const coachMessage={role:"model" as const,content:reply.content,feedback:reply.feedback};
       await saveCoachMessage(session,id,coachMessage);
       setMessages(current=>[...current,coachMessage]);
@@ -467,9 +470,9 @@ function Coach({ go, session, initialScenario, ...auth }: { go: (p: Page) => voi
   const current=scenarioData[scenario];
   return <><Header go={go} {...auth}/><main className="coach-page">
     <aside className="scenarios"><span className="eyebrow">مربی هوش مصنوعی</span><h2>تمرین مکالمه</h2><p>یک موقعیت را انتخاب کن و بدون قضاوت تمرین کن.</p>{(Object.keys(scenarioData) as Array<keyof typeof scenarioData>).map(s=><button className={scenario===s?"active":""} disabled={sending||resetting||loadingHistory} onClick={()=>changeScenario(s)} key={s}><span>{s}</span><Icon name="arrow"/></button>)}</aside>
-    <section className="chat"><div className="chat-head"><div className="ai-dot">AI</div><div><b>{scenario}</b><span>مربی آماده تمرین است</span></div><i/><button className="chat-reset" onClick={resetChat} disabled={!conversationId||sending||resetting||loadingHistory}><Icon name="reset"/>{resetting?"در حال ریست…":"ریست گفتگو"}</button></div>
+    <section className="chat"><div className="chat-head"><div className="ai-dot">AI</div><div><b>{scenario}</b><span>مربی آماده تمرین است</span><small className="quota-label">{quota?.monthly_limit===null?"سهمیه: نامحدود":quota?`سهمیهٔ باقی‌مانده: ${quota.remaining}`:"در حال دریافت سهمیه…"}</small></div><i/><button className="chat-reset" onClick={resetChat} disabled={!conversationId||sending||resetting||loadingHistory}><Icon name="reset"/>{resetting?"در حال ریست…":"ریست گفتگو"}</button></div>
       <div className="messages"><div className="context">سناریو: {current.context}</div><div className="message ai"><span>مربی</span><p>{current.prompt}</p></div>{loadingHistory?<div className="message ai"><span>مربی</span><p>در حال بازیابی گفت‌وگو…</p></div>:messages.map((item,index)=><div className={`message ${item.role==="user"?"me":"ai"}`} key={`${item.role}-${index}`}><span>{item.role==="model"?"مربی":""}</span><p>{item.content}</p>{item.role==="model"&&item.feedback&&<div className="feedback"><strong>بازخورد مربی</strong><p><b>نکتهٔ مثبت:</b> {item.feedback.positive}</p><p><b>پیشنهاد اصلاح:</b> {item.feedback.improvement}</p><p><b>پاسخ جایگزین:</b> {item.feedback.alternative}</p></div>}</div>)}{sending&&<div className="message ai"><span>مربی</span><p>در حال فکرکردن…</p></div>}{message&&<p className="coach-error">{message}</p>}</div>
-      <div className="composer"><input value={draft} disabled={sending||resetting||loadingHistory} onChange={e=>setDraft(e.target.value)} placeholder="پاسخت را بنویس..." onKeyDown={e=>e.key==="Enter"&&send()}/><button aria-label="ارسال پاسخ" disabled={sending||resetting||loadingHistory} onClick={send}><Icon name="send"/></button></div>
+      <div className="composer"><input value={draft} disabled={sending||resetting||loadingHistory||Boolean(quota&&!quota.allowed)} onChange={e=>setDraft(e.target.value)} placeholder={quota&&!quota.allowed?"سهمیهٔ این ماه تمام شده است":"پاسخت را بنویس..."} onKeyDown={e=>e.key==="Enter"&&send()}/><button aria-label="ارسال پاسخ" disabled={sending||resetting||loadingHistory||Boolean(quota&&!quota.allowed)} onClick={send}><Icon name="send"/></button></div>
     </section>
   </main><BottomNav page="coach" go={go}/></>;
 }

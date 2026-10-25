@@ -117,7 +117,9 @@ export type CoachFeedback = {
   alternative: string;
 };
 
-export type CoachReply = { content: string; feedback?: CoachFeedback };
+export type CoachQuota = { allowed: boolean; remaining: number | null; monthly_limit: number | null };
+
+export type CoachReply = { content: string; feedback?: CoachFeedback; quota?: CoachQuota };
 
 export type CoachMessage = { role: "user" | "model"; content: string; feedback?: CoachFeedback };
 
@@ -132,13 +134,28 @@ export async function requestCoachReply(session: AuthSession, scenario: { title:
     },
     body: JSON.stringify({ scenario, messages }),
   });
-  if (!response.ok) throw new Error(response.status === 503 ? "مربی هنوز آماده نشده است." : "پاسخ مربی دریافت نشد. دوباره تلاش کن.");
+  if (!response.ok) {
+    if (response.status === 429) throw new Error("سهمیهٔ ماهانهٔ مربی تو تمام شده است.");
+    throw new Error(response.status === 503 ? "مربی هنوز آماده نشده است." : "پاسخ مربی دریافت نشد. دوباره تلاش کن.");
+  }
   const payload = await response.json() as CoachReply;
   if (!payload.content) throw new Error("پاسخ مربی دریافت نشد. دوباره تلاش کن.");
   return payload;
 }
 
 type CoachConversation = { id: string };
+
+export async function getCoachQuota(session: AuthSession) {
+  const { anonKey } = requireConfig();
+  const response = await fetch(endpoint("/rest/v1/rpc/get_coach_quota"), {
+    method: "POST",
+    headers: { apikey: anonKey, Authorization: `Bearer ${session.access_token}`, "Content-Type": "application/json" },
+    body: "{}",
+  });
+  if (!response.ok) throw new Error("دریافت سهمیهٔ مربی انجام نشد.");
+  const quota = await response.json() as CoachQuota[];
+  return quota[0] || { allowed: false, remaining: 0, monthly_limit: 0 };
+}
 
 export async function getCoachConversation(session: AuthSession, scenarioKey: string) {
   const { anonKey } = requireConfig();

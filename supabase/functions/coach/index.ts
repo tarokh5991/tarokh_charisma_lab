@@ -17,9 +17,16 @@ type CoachFeedback = {
   alternative: string;
 };
 
+type CoachQuota = {
+  allowed: boolean;
+  remaining: number | null;
+  monthly_limit: number | null;
+};
+
 type CoachResponse = {
   content: string;
   feedback?: CoachFeedback;
+  quota?: CoachQuota;
 };
 
 function parseCoachResponse(value: string): CoachResponse {
@@ -54,6 +61,16 @@ Deno.serve(async (request) => {
     return new Response("Invalid request", { status: 400, headers: corsHeaders });
   }
 
+  const { data: quota, error: quotaError } = await supabase.rpc("consume_coach_message");
+  if (quotaError || !quota?.[0]) {
+    console.error("Coach quota lookup failed", quotaError?.message);
+    return new Response("Coach quota check failed", { status: 500, headers: corsHeaders });
+  }
+  const currentQuota = quota[0] as CoachQuota;
+  if (!currentQuota.allowed) {
+    return Response.json({ quota: currentQuota }, { status: 429, headers: corsHeaders });
+  }
+
   const apiKey = Deno.env.get("GOOGLE_AI_API_KEY");
   if (!apiKey) return new Response("Coach is not configured", { status: 503, headers: corsHeaders });
 
@@ -77,5 +94,5 @@ Deno.serve(async (request) => {
   const rawContent = payload.candidates?.[0]?.content?.parts?.map(part => part.text || "").join("").trim();
   if (!rawContent) return new Response("Coach response failed", { status: 502, headers: corsHeaders });
 
-  return Response.json(parseCoachResponse(rawContent), { headers: corsHeaders });
+  return Response.json({ ...parseCoachResponse(rawContent), quota: currentQuota }, { headers: corsHeaders });
 });
