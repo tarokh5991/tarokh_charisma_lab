@@ -398,7 +398,8 @@ function Coach({ go, session, initialScenario, ...auth }: { go: (p: Page) => voi
     },
   };
   const alwaysAvailableScenarios: Array<keyof typeof scenarioData>=["آشنایی در جمع","قرار اول","گفتگوی کاری","شروع مکالمه"];
-  const [scenario,setScenario]=useState<keyof typeof scenarioData>(()=>initialScenario && initialScenario in scenarioData ? initialScenario as keyof typeof scenarioData : "آشنایی در جمع");
+  const lessonScenario=initialScenario && initialScenario in scenarioData ? initialScenario as keyof typeof scenarioData : null;
+  const [scenario,setScenario]=useState<keyof typeof scenarioData>(()=>lessonScenario || "آشنایی در جمع");
   const [draft,setDraft]=useState("");
   const [messages,setMessages]=useState<CoachMessage[]>([]);
   const [quota,setQuota]=useState<CoachQuota|null>(null);
@@ -407,6 +408,9 @@ function Coach({ go, session, initialScenario, ...auth }: { go: (p: Page) => voi
   const [sending,setSending]=useState(false);
   const [resetting,setResetting]=useState(false);
   const [message,setMessage]=useState("");
+  useEffect(()=>{
+    if(lessonScenario && lessonScenario!==scenario) setScenario(lessonScenario);
+  },[lessonScenario,scenario]);
   useEffect(()=>{
     let active=true;
     setDraft("");
