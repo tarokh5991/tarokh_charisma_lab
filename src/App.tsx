@@ -127,7 +127,7 @@ function Home({ go, ...auth }: { go: (p: Page) => void } & HeaderProps) {
         <span className="eyebrow">آزمایشگاه کاریزمای مردانه</span>
         <h1>کاریزما اتفاقی نیست.<br/><em>ساختنی‌ست.</em></h1>
         <p>گام‌به‌گام یاد بگیر چطور با اعتماد‌به‌نفس صحبت کنی، زبان بدنت را کنترل کنی و حضوری ماندگار بسازی.</p>
-        <div className="actions"><Button onClick={() => go("auth")}>شروع مسیر کاریزما <Icon name="arrow"/></Button><button className="text-link" onClick={() => go("pricing")}>مشاهده پلن‌ها</button></div>
+        <div className="actions">{!auth.authenticated&&<Button onClick={() => go("auth")}>شروع مسیر کاریزما <Icon name="arrow"/></Button>}<button className="text-link" onClick={() => go("pricing")}>مشاهده پلن‌ها</button></div>
         <div className="proof"><strong>+۲٬۴۰۰</strong><span>مرد در مسیر ساختن<br/>نسخه قدرتمندتر خود</span></div>
       </div>
       <div className="portrait"><div className="portrait-label"><span>اصل اول</span><strong>حضور، قبل از کلام آغاز می‌شود.</strong></div></div>
@@ -141,7 +141,7 @@ function Home({ go, ...auth }: { go: (p: Page) => void } & HeaderProps) {
     <section className="testimonials"><div className="section-title"><span>تجربه اعضا</span><h2>نتیجه‌ی کسانی که مسیر را رفته‌اند</h2></div><div className="testimonial-row">
       {[["امیر ر.","نقره","«هنوز در شروع گفت‌وگو کمی مکث دارم، اما حالا می‌دانم چه سؤالی بپرسم و چطور ادامه بدهم.»","۸ هفته","Listening"],["سامان ک.","طلا","«تمرین‌های کوتاه کمکم کرد در جلسه‌ها آرام‌تر حرف بزنم و برای بیان نظرم عجله نکنم.»","۱۲ هفته","Expression"],["نیما ش.","برنز","«تغییر یک‌شبه نبود؛ ولی حالا زبان بدنم را بیشتر می‌شناسم و موقع صحبت کمتر خودم را جمع می‌کنم.»","۶ هفته","Confidence"]].map(([name,plan,quote,time,focus])=><article key={name}><div><strong>{name}</strong><span>{plan}</span></div><blockquote>{quote}</blockquote><small>{time} · تمرکز روی <b dir="ltr">{focus}</b></small></article>)}
     </div></section>
-  </main><Footer go={go}/><button className="sticky-cta" onClick={() => go("auth")}>شروع رایگان</button></>;
+  </main><Footer go={go}/></>;
 }
 
 function About({ go, ...auth }: { go: (p: Page) => void } & HeaderProps) {
