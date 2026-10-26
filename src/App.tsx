@@ -76,21 +76,44 @@ const Footer = ({ go }: { go: (p: Page) => void }) => (
 
 function SupportWidget({ showButton }: { showButton: boolean }) {
   const [open,setOpen]=useState(false);
-  const [active,setActive]=useState<number|null>(null);
+  const [active,setActive]=useState<string|null>(null);
+  const [category,setCategory]=useState("شروع و حساب");
   useEffect(()=>{
     const handle=()=>setOpen(true);
     window.addEventListener("open-support",handle);
     return ()=>window.removeEventListener("open-support",handle);
   },[]);
-  const faqs=[
-    ["کدام پلن برای من مناسب است؟","برای شروع مستقل، برنز و برای دریافت بازخورد و منتورینگ، طلا پیشنهاد می‌شود."],
-    ["پرداخت به چه صورت است؟","پرداخت یک‌جا و از طریق درگاه امن بانکی انجام می‌شود."],
-    ["مربی هوش مصنوعی چگونه کار می‌کند؟","یک موقعیت را انتخاب می‌کنی، مکالمه را تمرین می‌کنی و بازخورد فوری می‌گیری."],
-    ["تا چه زمانی به دوره دسترسی دارم؟","دسترسی به محتوای آموزشی دوره دائمی است."],
-  ];
+  const faqCategories={
+    "شروع و حساب":[
+      ["چطور مسیرم را شروع کنم؟","پس از ساخت حساب، ارزیابی کوتاه CLEAR را کامل کن تا دو مهارت پیشنهادی و نقطهٔ شروع مسیرت مشخص شود."],
+      ["چطور نام کاربری یا اطلاعات حسابم را تغییر دهم؟","از بخش «حساب من» می‌توانی نام کاربری‌ات را ویرایش کنی. همان‌جا وضعیت پلن و سوابق خرید را هم می‌بینی."],
+      ["اگر بخواهم حسابم را حذف کنم چه می‌شود؟","از بخش «حساب من» گزینهٔ حذف حساب را انتخاب کن. پس از تأیید، داده‌های حساب و پیشرفت‌های وابسته حذف می‌شوند."],
+    ],
+    "دوره و یادگیری":[
+      ["درس‌ها با چه ترتیبی باز می‌شوند؟","درس نخست از ابتدا باز است و هر درس بعدی پس از تکمیل درس قبلی در دسترس قرار می‌گیرد."],
+      ["تکمیل مطالعه و انجام تمرین چه تفاوتی دارند؟","مطالعهٔ درس و انجام تمرین دو ثبت جداگانه هستند. برای پیشرفت واقعی، هر دو را پس از انجام ثبت کن."],
+      ["چالش ماهانه چیست؟","یک تمرین عملی متناسب با ارزیابی و پیشرفت توست که برای پلن‌های نقره، طلا و الماس در آکادمی نمایش داده می‌شود."],
+    ],
+    "مربی و مشاور AI":[
+      ["مربی AI چه کاری انجام می‌دهد؟","در سناریوهای گفت‌وگو با تو نقش‌آفرینی می‌کند و نکتهٔ مثبت، پیشنهاد اصلاح و پاسخ جایگزین می‌دهد."],
+      ["مشاور شخصی AI چه کمکی می‌کند؟","دربارهٔ استفاده از سایت، مسیر درس‌ها، تمرین، چالش ماهانه و برنامهٔ مناسب سطح فعلی‌ات راهنمایی می‌کند."],
+      ["سهمیهٔ AI چگونه محاسبه می‌شود؟","سهمیه به‌صورت روزانه و بر اساس پلن فعال محاسبه می‌شود. نقره روزانه ۳۰ پیام، طلا ۱۵۰ پیام و الماس سهمیهٔ نامحدود دارد."],
+    ],
+    "پلن و پرداخت":[
+      ["کدام پلن برای من مناسب است؟","برنز برای یادگیری مستقل است. نقره دسترسی به AI و چالش ماهانه می‌دهد؛ طلا و الماس برای تمرین عمیق‌تر، سهمیهٔ بیشتر و برنامهٔ شخصی‌سازی‌شده مناسب‌اند."],
+      ["مدت اعتبار پلن چقدر است؟","هر پلن از زمان فعال‌سازی یک ماه اعتبار دارد و روزهای باقی‌مانده در بخش «حساب من» و صفحهٔ پلن‌ها نمایش داده می‌شود."],
+      ["پرداخت چگونه انجام می‌شود؟","فعلاً فعال‌سازی پلن در محیط آزمایشی انجام می‌شود و هیچ تراکنش بانکی واقعی ثبت نمی‌شود."],
+      ["آیا جلسات یا منتورینگ انسانی فعال است؟","خیر. در وضعیت فعلی، بازخورد و برنامهٔ تمرینی از طریق مربی و مشاور AI ارائه می‌شود."],
+    ],
+    "پشتیبانی":[
+      ["اگر پاسخ سؤالم را اینجا پیدا نکردم چه کنم؟","از طریق تلگرام یا ایمیل با پشتیبانی ارتباط بگیر و در صورت امکان نام کاربری و شرح کوتاه مسئله را بفرست."],
+      ["چرا یک بخش از سایت برایم باز نمی‌شود؟","ابتدا مطمئن شو وارد حساب شده‌ای و پلن فعالت منقضی نشده است. سپس صفحه را تازه‌سازی کن؛ اگر مشکل باقی ماند با پشتیبانی تماس بگیر."],
+    ],
+  } as Record<string, Array<[string,string]>>;
+  const faqs=faqCategories[category];
   return <div className={`support-widget ${showButton?"visible":""}`}>
     {open&&<section className="support-panel"><div className="support-head"><div><span>مرکز راهنما</span><b>چطور کمکت کنیم؟</b></div><button aria-label="بستن" onClick={()=>setOpen(false)}><Icon name="close"/></button></div>
-      <div className="support-body"><h3>سؤال‌های متداول</h3><div className="faq-list">{faqs.map(([q,a],i)=><div className={active===i?"active":""} key={q}><button onClick={()=>setActive(active===i?null:i)}><span>{q}</span><b>{active===i?"−":"+"}</b></button>{active===i&&<p>{a}</p>}</div>)}</div>
+      <div className="support-body"><h3>دسته‌بندی راهنما</h3><div className="support-categories">{Object.keys(faqCategories).map(item=><button className={category===item?"active":""} onClick={()=>{setCategory(item);setActive(null)}} key={item}>{item}</button>)}</div><h3>{category}</h3><div className="faq-list">{faqs.map(([question,answer])=><div className={active===question?"active":""} key={question}><button onClick={()=>setActive(active===question?null:question)}><span>{question}</span><b>{active===question?"−":"+"}</b></button>{active===question&&<p>{answer}</p>}</div>)}</div>
       <h3>ارتباط با پشتیبان</h3><div className="support-links"><a href="https://t.me/tarokhsupport" target="_blank" rel="noreferrer">تلگرام</a><a href="mailto:support@tarokh.ir">ایمیل</a></div></div>
     </section>}
     {showButton&&<button className="support-fab" aria-label="پشتیبانی" onClick={()=>setOpen(!open)}><Icon name={open?"close":"chat"}/></button>}
