@@ -375,7 +375,7 @@ function Lesson({ go, lesson, session, onOpenCoach, ...auth }: { go: (p: Page) =
   </main><BottomNav page="lesson" go={go}/></>;
 }
 
-function Coach({ go, session, initialScenario, ...auth }: { go: (p: Page) => void; session: AuthSession; initialScenario: string | null } & HeaderProps) {
+function Coach({ go, session, initialScenario, activePlan, ...auth }: { go: (p: Page) => void; session: AuthSession; initialScenario: string | null; activePlan: ActivePlan | null } & HeaderProps) {
   const scenarioData = {
     "آشنایی در جمع": {
       context:"در یک دورهمی، فرد جدیدی کنار تو ایستاده است.",
@@ -425,6 +425,15 @@ function Coach({ go, session, initialScenario, ...auth }: { go: (p: Page) => voi
   const [sending,setSending]=useState(false);
   const [resetting,setResetting]=useState(false);
   const [message,setMessage]=useState("");
+  const [learnerContext,setLearnerContext]=useState({ plan: activePlan?.name || "برنز", recommendedDimensions: [] as string[], completedLessons: 0, totalLessons: 0 });
+  useEffect(()=>{
+    let active=true;
+    Promise.all([getLatestAssessment(session), getLessonProgress(session), getPublishedLessons()]).then(([recommendedDimensions, progress, lessons])=>{
+      if(!active) return;
+      setLearnerContext({ plan: activePlan?.name || "برنز", recommendedDimensions, completedLessons: progress.filter(item=>item.completed_at).length, totalLessons: lessons.length });
+    }).catch(()=>{});
+    return ()=>{active=false};
+  },[session,activePlan]);
   useEffect(()=>{
     if(lessonScenario && lessonScenario!==scenario) setScenario(lessonScenario);
   },[lessonScenario,scenario]);
@@ -480,7 +489,7 @@ function Coach({ go, session, initialScenario, ...auth }: { go: (p: Page) => voi
       const nextMessages=[...messages,userMessage];
       setMessages(nextMessages);
       setDraft("");
-      const reply=await requestCoachReply(session,{title:scenario,context:scenarioData[scenario].context},nextMessages);
+      const reply=await requestCoachReply(session,{title:scenario,context:scenarioData[scenario].context},nextMessages,learnerContext);
       if(reply.quota) setQuota(reply.quota);
       const coachMessage={role:"model" as const,content:reply.content,feedback:reply.feedback};
       await saveCoachMessage(session,id,coachMessage);
@@ -490,8 +499,11 @@ function Coach({ go, session, initialScenario, ...auth }: { go: (p: Page) => voi
     } finally { setSending(false); }
   };
   const current=scenarioData[scenario];
+  const focusLabels: Record<string,string>={confidence:"اعتمادبه‌نفس",listening:"گوش دادن",expression:"بیان",awareness:"آگاهی اجتماعی",rapport:"ایجاد ارتباط"};
+  const practiceLevel=learnerContext.completedLessons===0?"شروع مسیر":learnerContext.completedLessons<Math.max(2,learnerContext.totalLessons/2)?"در حال پیشرفت":"پیشرفته‌تر";
+  const planGuidance: Record<string,string>={برنز:"تمرین‌های کوتاه و پایه برای ساخت عادت",نقره:"چالش‌های بیشتر با بازخورد دقیق‌تر",طلا:"برنامهٔ چندمرحله‌ای و سناریوهای دشوارتر",الماس:"پیگیری منظم، تنوع بیشتر و معیار سنجش مشخص"};
   return <><Header go={go} {...auth}/><main className="coach-page">
-    <aside className="scenarios"><span className="eyebrow">مربی هوش مصنوعی</span><h2>تمرین مکالمه</h2><p>یک موقعیت را انتخاب کن و بدون قضاوت تمرین کن.</p>{alwaysAvailableScenarios.map(s=><button className={scenario===s?"active":""} disabled={sending||resetting||loadingHistory} onClick={()=>changeScenario(s)} key={s}><span>{s}</span><Icon name="arrow"/></button>)}</aside>
+    <aside className="scenarios"><span className="eyebrow">مربی هوش مصنوعی</span><h2>تمرین مکالمه</h2><p>یک موقعیت را انتخاب کن و بدون قضاوت تمرین کن.</p><section className="recommended-focus"><small>برنامهٔ فعلی تو</small><h3>سطح تمرینی: {practiceLevel}</h3><p>{learnerContext.recommendedDimensions.length?`تمرکز پیشنهادی: ${learnerContext.recommendedDimensions.map(dimension=>focusLabels[dimension]||dimension).join(" و ")}`:"با تمرین‌های پایه شروع می‌کنیم."}</p><p>{learnerContext.completedLessons} از {learnerContext.totalLessons||"—"} درس تکمیل شده</p><p>{planGuidance[learnerContext.plan]||planGuidance["برنز"]}</p></section>{alwaysAvailableScenarios.map(s=><button className={scenario===s?"active":""} disabled={sending||resetting||loadingHistory} onClick={()=>changeScenario(s)} key={s}><span>{s}</span><Icon name="arrow"/></button>)}</aside>
     <section className="chat"><div className="chat-head"><div className="ai-dot">AI</div><div><b>{scenario}</b><span>مربی آماده تمرین است</span><small className="quota-label">{quota?.daily_limit===null?"سهمیهٔ روزانه: نامحدود":quota?`سهمیهٔ باقی‌ماندهٔ امروز: ${quota.remaining}`:"در حال دریافت سهمیه…"}</small></div><i/><button className="chat-reset" onClick={resetChat} disabled={!conversationId||sending||resetting||loadingHistory}><Icon name="reset"/>{resetting?"در حال ریست…":"ریست گفتگو"}</button></div>
       <div className="messages"><div className="context">سناریو: {current.context}</div><div className="message ai"><span>مربی</span><p>{current.prompt}</p></div>{loadingHistory?<div className="message ai"><span>مربی</span><p>در حال بازیابی گفت‌وگو…</p></div>:messages.map((item,index)=><div className={`message ${item.role==="user"?"me":"ai"}`} key={`${item.role}-${index}`}><span>{item.role==="model"?"مربی":""}</span><p>{item.content}</p>{item.role==="model"&&item.feedback&&<div className="feedback"><strong>بازخورد مربی</strong><p><b>نکتهٔ مثبت:</b> {item.feedback.positive}</p><p><b>پیشنهاد اصلاح:</b> {item.feedback.improvement}</p><p><b>پاسخ جایگزین:</b> {item.feedback.alternative}</p></div>}</div>)}{sending&&<div className="message ai"><span>مربی</span><p>در حال فکرکردن…</p></div>}{message&&<p className="coach-error">{message}</p>}</div>
       <div className="composer"><input value={draft} disabled={sending||resetting||loadingHistory||Boolean(quota&&!quota.allowed)} onChange={e=>setDraft(e.target.value)} placeholder={quota&&!quota.allowed?"سهمیهٔ امروز تمام شده است":"پاسخت را بنویس..."} onKeyDown={e=>e.key==="Enter"&&send()}/><button aria-label="ارسال پاسخ" disabled={sending||resetting||loadingHistory||Boolean(quota&&!quota.allowed)} onClick={send}><Icon name="send"/></button></div>
@@ -501,9 +513,9 @@ function Coach({ go, session, initialScenario, ...auth }: { go: (p: Page) => voi
 
 const plans = [
   {name:"برنز",slug:"bronze",price:"۲٫۵",desc:"شروع اصولی و مستقل",items:["ورود امن با OTP و حساب پایدار","ارزیابی اولیهٔ CLEAR و پیشنهاد مسیر شروع","دسترسی کامل به دوره","کتابخانهٔ درس‌های مرحله‌ای","تمرین‌های عملی هر درس","داشبورد پیشرفت، streak و تاریخچه"]},
-  {name:"نقره",slug:"silver",price:"۳٫۵",desc:"تمرین با همراهی بیشتر",items:["تمام امکانات برنز","مربی AI سناریومحور، روزانه ۳۰ پیام","تاریخچهٔ گفتگو و بازخورد ساختاریافته","گروه خصوصی اعضا","جلسهٔ گروهی ماهانهٔ پرسش‌وپاسخ","چالش تمرینی ماهانه","تخفیف منتورینگ خصوصی"]},
-  {name:"طلا",slug:"gold",price:"۶٫۵",desc:"انتخاب جدی برای تغییر",popular:true,items:["تمام امکانات نقره","مربی AI سناریومحور، روزانه ۱۵۰ پیام","تاریخچه و ریست گفتگوهای مربی","جلسهٔ گروهی تخصصی ماهانه","بررسی محدود تمرین‌ها توسط منتور","برنامهٔ پیشنهادی ماهانه","جلسهٔ خصوصی ۳۰ دقیقه‌ای","بازخورد ویدیوی تمرین"]},
-  {name:"الماس",slug:"diamond",price:"۱۰",desc:"مسیر کاملاً اختصاصی",items:["تمام امکانات طلا","مربی AI نامحدود با بازخورد ساختاریافته","فعال‌سازی و تمدید یک‌ماهه","۲ جلسهٔ خصوصی ۶۰ تا ۹۰ دقیقه‌ای","برنامهٔ کاملاً شخصی‌سازی‌شدهٔ ماهانه","بازخورد هفتگی تمرین‌ها","بررسی صوت یا ویدیو","پشتیبانی اولویت‌دار","ارزیابی پایان ماه"]},
+  {name:"نقره",slug:"silver",price:"۳٫۵",desc:"تمرین با همراهی بیشتر",items:["تمام امکانات برنز","مربی AI سناریومحور، روزانه ۳۰ پیام","تاریخچهٔ گفتگو و بازخورد ساختاریافته","برنامهٔ تمرینی AI متناسب با پیشرفت","چالش تمرینی ماهانه","تحلیل دقیق‌تر پاسخ‌ها"]},
+  {name:"طلا",slug:"gold",price:"۶٫۵",desc:"انتخاب جدی برای تغییر",popular:true,items:["تمام امکانات نقره","مربی AI سناریومحور، روزانه ۱۵۰ پیام","تاریخچه و ریست گفتگوهای مربی","برنامهٔ چندمرحله‌ای متناسب با پیشرفت","چالش‌های سناریومحور دشوارتر","بازخورد عمیق‌تر و پاسخ جایگزین"]},
+  {name:"الماس",slug:"diamond",price:"۱۰",desc:"مسیر کاملاً اختصاصی",items:["تمام امکانات طلا","مربی AI نامحدود با بازخورد ساختاریافته","فعال‌سازی و تمدید یک‌ماهه","برنامهٔ کاملاً شخصی‌سازی‌شدهٔ ماهانه","پیگیری هفتگی تمرین‌ها","تنوع سناریو و معیار سنجش مشخص","ارزیابی پایان ماه"]},
 ];
 const planComparison = [
   ["ورود امن با OTP و حساب پایدار", "دارد", "دارد", "دارد"],
@@ -521,9 +533,8 @@ const planComparison = [
   ["چالش تمرینی ماهانه", "دارد", "دارد", "دارد"],
   ["بررسی تمرین توسط منتور", "—", "محدود", "هفتگی"],
   ["برنامهٔ شخصی‌سازی‌شده", "—", "پیشنهادی", "کامل و ماهانه"],
-  ["جلسهٔ خصوصی منتورینگ", "—", "۳۰ دقیقه در ماه", "۲ جلسهٔ ۶۰ تا ۹۰ دقیقه‌ای"],
-  ["بررسی صوت یا ویدیو", "—", "محدود", "دارد"],
-  ["پشتیبانی اولویت‌دار", "—", "—", "دارد"],
+  ["چالش‌های سناریومحور", "پایه", "پیشرفته", "متنوع و قابل سنجش"],
+  ["پیگیری تمرین‌ها", "—", "—", "هفتگی با مربی AI"],
   ["ارزیابی پایان ماه", "—", "—", "دارد"],
 ];
 function Pricing({ go, choose, activePlan, ...auth }: { go: (p: Page) => void; choose: (p: string) => void; activePlan: ActivePlan | null } & HeaderProps) {
@@ -671,5 +682,5 @@ export default function App() {
   const displayName=profile?.username || profile?.display_name || session?.user.user_metadata?.username || session?.user.user_metadata?.display_name;
   const visiblePage=!session && protectedPages.includes(page)?"auth":page;
   const headerAuth={authenticated:Boolean(session),displayName,onLogout:logout};
-  return <div dir="rtl">{visiblePage==="home"?<Home go={go} {...headerAuth}/>:visiblePage==="about"?<About go={go} {...headerAuth}/>:visiblePage==="auth"?<Auth go={go} onAuthenticated={authenticated}/>:visiblePage==="dashboard"?<Dashboard go={go} displayName={displayName} onLogout={logout} session={session!} onOpenLesson={openLesson}/>:visiblePage==="library"?<Library go={go} onOpenLesson={openLesson} session={session!} {...headerAuth}/>:visiblePage==="profile"?<Profile go={go} session={session!} profile={profile} activePlan={activePlan} onUpdateUsername={updateUsername} onDeleteAccount={removeAccount} {...headerAuth}/>:visiblePage==="lesson"?<Lesson go={go} lesson={activeLesson} session={session!} onOpenCoach={openCoach} {...headerAuth}/>:visiblePage==="coach"?<Coach go={go} session={session!} initialScenario={activeCoachScenario} {...headerAuth}/>:visiblePage==="pricing"?<Pricing go={go} choose={setPlan} activePlan={activePlan} {...headerAuth}/>:<Checkout go={go} plan={plan} session={session!} onActivated={activatePlan} {...headerAuth}/>}<SupportWidget showButton={visiblePage==="home"||visiblePage==="dashboard"}/></div>;
+  return <div dir="rtl">{visiblePage==="home"?<Home go={go} {...headerAuth}/>:visiblePage==="about"?<About go={go} {...headerAuth}/>:visiblePage==="auth"?<Auth go={go} onAuthenticated={authenticated}/>:visiblePage==="dashboard"?<Dashboard go={go} displayName={displayName} onLogout={logout} session={session!} onOpenLesson={openLesson}/>:visiblePage==="library"?<Library go={go} onOpenLesson={openLesson} session={session!} {...headerAuth}/>:visiblePage==="profile"?<Profile go={go} session={session!} profile={profile} activePlan={activePlan} onUpdateUsername={updateUsername} onDeleteAccount={removeAccount} {...headerAuth}/>:visiblePage==="lesson"?<Lesson go={go} lesson={activeLesson} session={session!} onOpenCoach={openCoach} {...headerAuth}/>:visiblePage==="coach"?<Coach go={go} session={session!} initialScenario={activeCoachScenario} activePlan={activePlan} {...headerAuth}/>:visiblePage==="pricing"?<Pricing go={go} choose={setPlan} activePlan={activePlan} {...headerAuth}/>:<Checkout go={go} plan={plan} session={session!} onActivated={activatePlan} {...headerAuth}/>}<SupportWidget showButton={visiblePage==="home"||visiblePage==="dashboard"}/></div>;
 }

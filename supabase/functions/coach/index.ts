@@ -9,6 +9,12 @@ const corsHeaders = {
 type RequestBody = {
   scenario: { title: string; context: string };
   messages: Array<{ role: "user" | "model"; content: string }>;
+  learnerContext: {
+    plan: string;
+    recommendedDimensions: string[];
+    completedLessons: number;
+    totalLessons: number;
+  };
 };
 
 type CoachFeedback = {
@@ -56,8 +62,8 @@ Deno.serve(async (request) => {
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) return new Response("Unauthorized", { status: 401, headers: corsHeaders });
 
-  const { scenario, messages } = await request.json() as RequestBody;
-  if (!scenario?.title || !scenario?.context || !Array.isArray(messages) || messages.length === 0 || messages.length > 20) {
+  const { scenario, messages, learnerContext } = await request.json() as RequestBody;
+  if (!scenario?.title || !scenario?.context || !Array.isArray(messages) || messages.length === 0 || messages.length > 20 || !learnerContext?.plan || !Array.isArray(learnerContext.recommendedDimensions)) {
     return new Response("Invalid request", { status: 400, headers: corsHeaders });
   }
 
@@ -74,7 +80,15 @@ Deno.serve(async (request) => {
   const apiKey = Deno.env.get("GOOGLE_AI_API_KEY");
   if (!apiKey) return new Response("Coach is not configured", { status: 503, headers: corsHeaders });
 
-  const systemInstruction = `تو مربی تمرین مهارت ارتباطی TAROKH هستی. پاسخ‌ها فقط فارسی، محترمانه، کوتاه و عملی باشند. در سناریوی «${scenario.title}» نقش طرف مقابل را بازی کن و پس از پاسخ کاربر، یک بازخورد مشخص و کوتاه بده؛ سپس گفت‌وگو را طبیعی ادامه بده. از فریب، فشار، تحقیر، نقض رضایت یا توصیه درمانی پرهیز کن. زمینه: ${scenario.context}\n\nفقط JSON معتبر و بدون markdown برگردان: {"content":"پاسخ کوتاه در نقش طرف مقابل","feedback":{"positive":"یک نکتهٔ مثبت مشخص","improvement":"یک پیشنهاد اصلاح مشخص","alternative":"یک پاسخ جایگزین کوتاه"}}.`;
+  const dimensionLabels: Record<string, string> = { confidence: "اعتمادبه‌نفس", listening: "گوش دادن", expression: "بیان", awareness: "آگاهی اجتماعی", rapport: "ایجاد ارتباط" };
+  const focus = learnerContext.recommendedDimensions.map(dimension => dimensionLabels[dimension] || dimension).join(" و ") || "مهارت‌های پایهٔ ارتباطی";
+  const progress = `${Math.max(0, learnerContext.completedLessons)} از ${Math.max(1, learnerContext.totalLessons)} درس تکمیل شده است`;
+  const systemInstruction = `تو مربی تمرین مهارت ارتباطی TAROKH هستی. پاسخ‌ها فقط فارسی، محترمانه، کوتاه و عملی باشند. در سناریوی «${scenario.title}» نقش طرف مقابل را بازی کن و پس از پاسخ کاربر، یک بازخورد مشخص و کوتاه بده؛ سپس گفت‌وگو را طبیعی ادامه بده. از فریب، فشار، تحقیر، نقض رضایت یا توصیه درمانی پرهیز کن.
+
+پروفایل یادگیرنده: پلن ${learnerContext.plan}، تمرکز پیشنهادی ${focus}، پیشرفت ${progress}. سطح تمرینی را از شواهد واقعی در پیام‌ها و پیشرفت درس‌ها استنباط کن، نه از نام پلن. برای برنز تمرین را کوتاه و پایه نگه دار؛ برای نقره چالش و بازخورد دقیق‌تری بده؛ برای طلا برنامهٔ چندمرحله‌ای و سناریوهای دشوارتر پیشنهاد کن؛ برای الماس پیگیری منظم، تنوع بیشتر و معیار سنجش مشخص ارائه بده. پلن فقط عمق و تعداد تمرین‌ها را محدود می‌کند و نشانهٔ سطح واقعی کاربر نیست. اگر کاربر دربارهٔ برنامهٔ تمرینی پرسید، حداکثر سه اقدام روشن و قابل انجام پیشنهاد بده.
+زمینه: ${scenario.context}
+
+فقط JSON معتبر و بدون markdown برگردان: {"content":"پاسخ کوتاه در نقش طرف مقابل","feedback":{"positive":"یک نکتهٔ مثبت مشخص","improvement":"یک پیشنهاد اصلاح مشخص","alternative":"یک پاسخ جایگزین کوتاه"}}.`;
   const contents = messages.map(message => ({
     role: message.role,
     parts: [{ text: message.content.slice(0, 2000) }],
