@@ -138,7 +138,7 @@ export type CoachLearnerContext = {
   totalLessons: number;
 };
 
-export async function requestCoachReply(session: AuthSession, scenario: { title: string; context: string }, messages: CoachMessage[], learnerContext: CoachLearnerContext) {
+export async function requestCoachReply(session: AuthSession, scenario: { title: string; context: string }, messages: CoachMessage[], learnerContext: CoachLearnerContext, mode: "practice" | "advisor" = "practice") {
   const { anonKey } = requireConfig();
   const response = await fetch(endpoint("/functions/v1/coach"), {
     method: "POST",
@@ -147,7 +147,7 @@ export async function requestCoachReply(session: AuthSession, scenario: { title:
       Authorization: `Bearer ${session.access_token}`,
       "Content-Type": "application/json",
     },
-    body: JSON.stringify({ scenario, messages, learnerContext }),
+    body: JSON.stringify({ scenario, messages, learnerContext, mode }),
   });
   if (!response.ok) {
     if (response.status === 429) throw new Error("سهمیهٔ روزانهٔ مربی تو تمام شده است.");

@@ -439,8 +439,12 @@ function Coach({ go, session, initialScenario, activePlan, ...auth }: { go: (p: 
       context:"در یک دیدار، طرف مقابل دربارهٔ ارائه‌ای که اخیراً داشته صحبت می‌کند.",
       prompt:"ارائه‌ام خوب پیش رفت، ولی برای بخش آخر خیلی وقت کم آوردم.",
     },
+    "مشاورهٔ شخصی": {
+      context:"مشاوره دربارهٔ استفاده از سایت، مسیر یادگیری، تمرین و رشد مهارت ارتباطی.",
+      prompt:"سلام، من مشاور شخصی تو هستم. دربارهٔ مسیر درس‌ها، تمرین، چالش ماهانه یا رشد مهارت ارتباطی هر سؤالی داری بپرس.",
+    },
   };
-  const alwaysAvailableScenarios: Array<keyof typeof scenarioData>=["آشنایی در جمع","قرار اول","گفتگوی کاری","شروع مکالمه"];
+  const alwaysAvailableScenarios: Array<keyof typeof scenarioData>=["مشاورهٔ شخصی","آشنایی در جمع","قرار اول","گفتگوی کاری","شروع مکالمه"];
   const lessonScenario=initialScenario && initialScenario in scenarioData ? initialScenario as keyof typeof scenarioData : null;
   const [scenario,setScenario]=useState<keyof typeof scenarioData>(()=>lessonScenario || "آشنایی در جمع");
   const [draft,setDraft]=useState("");
@@ -515,7 +519,7 @@ function Coach({ go, session, initialScenario, activePlan, ...auth }: { go: (p: 
       const nextMessages=[...messages,userMessage];
       setMessages(nextMessages);
       setDraft("");
-      const reply=await requestCoachReply(session,{title:scenario,context:scenarioData[scenario].context},nextMessages,learnerContext);
+      const reply=await requestCoachReply(session,{title:scenario,context:scenarioData[scenario].context},nextMessages,learnerContext,scenario==="مشاورهٔ شخصی"?"advisor":"practice");
       if(reply.quota) setQuota(reply.quota);
       const coachMessage={role:"model" as const,content:reply.content,feedback:reply.feedback};
       await saveCoachMessage(session,id,coachMessage);
@@ -525,13 +529,14 @@ function Coach({ go, session, initialScenario, activePlan, ...auth }: { go: (p: 
     } finally { setSending(false); }
   };
   const current=scenarioData[scenario];
+  const isAdvisor=scenario==="مشاورهٔ شخصی";
   const focusLabels: Record<string,string>={confidence:"اعتمادبه‌نفس",listening:"گوش دادن",expression:"بیان",awareness:"آگاهی اجتماعی",rapport:"ایجاد ارتباط"};
   const practiceLevel=learnerContext.completedLessons===0?"شروع مسیر":learnerContext.completedLessons<Math.max(2,learnerContext.totalLessons/2)?"در حال پیشرفت":"پیشرفته‌تر";
   const planGuidance: Record<string,string>={برنز:"تمرین‌های کوتاه و پایه برای ساخت عادت",نقره:"چالش‌های بیشتر با بازخورد دقیق‌تر",طلا:"برنامهٔ چندمرحله‌ای و سناریوهای دشوارتر",الماس:"پیگیری منظم، تنوع بیشتر و معیار سنجش مشخص"};
   return <><Header go={go} {...auth}/><main className="coach-page">
-    <aside className="scenarios"><span className="eyebrow">مربی هوش مصنوعی</span><h2>تمرین مکالمه</h2><p>یک موقعیت را انتخاب کن و بدون قضاوت تمرین کن.</p><section className="recommended-focus"><small>برنامهٔ فعلی تو</small><h3>سطح تمرینی: {practiceLevel}</h3><p>{learnerContext.recommendedDimensions.length?`تمرکز پیشنهادی: ${learnerContext.recommendedDimensions.map(dimension=>focusLabels[dimension]||dimension).join(" و ")}`:"با تمرین‌های پایه شروع می‌کنیم."}</p><p>{learnerContext.completedLessons} از {learnerContext.totalLessons||"—"} درس تکمیل شده</p><p>{planGuidance[learnerContext.plan]||planGuidance["برنز"]}</p></section>{alwaysAvailableScenarios.map(s=><button className={scenario===s?"active":""} disabled={sending||resetting||loadingHistory} onClick={()=>changeScenario(s)} key={s}><span>{s}</span><Icon name="arrow"/></button>)}</aside>
-    <section className="chat"><div className="chat-head"><div className="ai-dot">AI</div><div><b>{scenario}</b><span>مربی آماده تمرین است</span><small className="quota-label">{quota?.daily_limit===null?"سهمیهٔ روزانه: نامحدود":quota?`سهمیهٔ باقی‌ماندهٔ امروز: ${quota.remaining}`:"در حال دریافت سهمیه…"}</small></div><i/><button className="chat-reset" onClick={resetChat} disabled={!conversationId||sending||resetting||loadingHistory}><Icon name="reset"/>{resetting?"در حال ریست…":"ریست گفتگو"}</button></div>
-      <div className="messages"><div className="context">سناریو: {current.context}</div><div className="message ai"><span>مربی</span><p>{current.prompt}</p></div>{loadingHistory?<div className="message ai"><span>مربی</span><p>در حال بازیابی گفت‌وگو…</p></div>:messages.map((item,index)=><div className={`message ${item.role==="user"?"me":"ai"}`} key={`${item.role}-${index}`}><span>{item.role==="model"?"مربی":""}</span><p>{item.content}</p>{item.role==="model"&&item.feedback&&<div className="feedback"><strong>بازخورد مربی</strong><p><b>نکتهٔ مثبت:</b> {item.feedback.positive}</p><p><b>پیشنهاد اصلاح:</b> {item.feedback.improvement}</p><p><b>پاسخ جایگزین:</b> {item.feedback.alternative}</p></div>}</div>)}{sending&&<div className="message ai"><span>مربی</span><p>در حال فکرکردن…</p></div>}{message&&<p className="coach-error">{message}</p>}</div>
+    <aside className="scenarios"><span className="eyebrow">هوش مصنوعی TAROKH</span><h2>{isAdvisor?"مشاورهٔ شخصی":"تمرین مکالمه"}</h2><p>{isAdvisor?"دربارهٔ سایت، مسیر یادگیری یا تمرین مناسب خودت سؤال بپرس.":"یک موقعیت را انتخاب کن و بدون قضاوت تمرین کن."}</p><section className="recommended-focus"><small>برنامهٔ فعلی تو</small><h3>سطح تمرینی: {practiceLevel}</h3><p>{learnerContext.recommendedDimensions.length?`تمرکز پیشنهادی: ${learnerContext.recommendedDimensions.map(dimension=>focusLabels[dimension]||dimension).join(" و ")}`:"با تمرین‌های پایه شروع می‌کنیم."}</p><p>{learnerContext.completedLessons} از {learnerContext.totalLessons||"—"} درس تکمیل شده</p><p>{planGuidance[learnerContext.plan]||planGuidance["برنز"]}</p></section>{alwaysAvailableScenarios.map(s=><button className={scenario===s?"active":""} disabled={sending||resetting||loadingHistory} onClick={()=>changeScenario(s)} key={s}><span>{s}</span><Icon name="arrow"/></button>)}</aside>
+    <section className="chat"><div className="chat-head"><div className="ai-dot">AI</div><div><b>{scenario}</b><span>{isAdvisor?"مشاور آمادهٔ پاسخ‌گویی است":"مربی آماده تمرین است"}</span><small className="quota-label">{quota?.daily_limit===null?"سهمیهٔ روزانه: نامحدود":quota?`سهمیهٔ باقی‌ماندهٔ امروز: ${quota.remaining}`:"در حال دریافت سهمیه…"}</small></div><i/><button className="chat-reset" onClick={resetChat} disabled={!conversationId||sending||resetting||loadingHistory}><Icon name="reset"/>{resetting?"در حال ریست…":"ریست گفتگو"}</button></div>
+      <div className="messages"><div className="context">{isAdvisor?"موضوع مشاوره":"سناریو"}: {current.context}</div><div className="message ai"><span>{isAdvisor?"مشاور":"مربی"}</span><p>{current.prompt}</p></div>{loadingHistory?<div className="message ai"><span>{isAdvisor?"مشاور":"مربی"}</span><p>در حال بازیابی گفت‌وگو…</p></div>:messages.map((item,index)=><div className={`message ${item.role==="user"?"me":"ai"}`} key={`${item.role}-${index}`}><span>{item.role==="model"?(isAdvisor?"مشاور":"مربی"):""}</span><p>{item.content}</p>{item.role==="model"&&item.feedback&&<div className="feedback"><strong>بازخورد مربی</strong><p><b>نکتهٔ مثبت:</b> {item.feedback.positive}</p><p><b>پیشنهاد اصلاح:</b> {item.feedback.improvement}</p><p><b>پاسخ جایگزین:</b> {item.feedback.alternative}</p></div>}</div>)}{sending&&<div className="message ai"><span>مربی</span><p>در حال فکرکردن…</p></div>}{message&&<p className="coach-error">{message}</p>}</div>
       <div className="composer"><input value={draft} disabled={sending||resetting||loadingHistory||Boolean(quota&&!quota.allowed)} onChange={e=>setDraft(e.target.value)} placeholder={quota&&!quota.allowed?"سهمیهٔ امروز تمام شده است":"پاسخت را بنویس..."} onKeyDown={e=>e.key==="Enter"&&send()}/><button aria-label="ارسال پاسخ" disabled={sending||resetting||loadingHistory||Boolean(quota&&!quota.allowed)} onClick={send}><Icon name="send"/></button></div>
     </section>
   </main><BottomNav page="coach" go={go}/></>;

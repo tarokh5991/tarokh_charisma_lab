@@ -9,6 +9,7 @@ const corsHeaders = {
 type RequestBody = {
   scenario: { title: string; context: string };
   messages: Array<{ role: "user" | "model"; content: string }>;
+  mode?: "practice" | "advisor";
   learnerContext: {
     plan: string;
     recommendedDimensions: string[];
@@ -39,8 +40,10 @@ function parseCoachResponse(value: string): CoachResponse {
   const normalized = value.replace(/^```(?:json)?\s*/i, "").replace(/\s*```$/, "");
   try {
     const payload = JSON.parse(normalized) as Partial<CoachResponse>;
-    if (typeof payload.content === "string" && payload.feedback && typeof payload.feedback.positive === "string" && typeof payload.feedback.improvement === "string" && typeof payload.feedback.alternative === "string") {
-      return { content: payload.content, feedback: payload.feedback };
+    if (typeof payload.content === "string") {
+      const feedback = payload.feedback;
+      if (feedback && typeof feedback.positive === "string" && typeof feedback.improvement === "string" && typeof feedback.alternative === "string") return { content: payload.content, feedback };
+      return { content: payload.content };
     }
   } catch {
   }
@@ -62,8 +65,8 @@ Deno.serve(async (request) => {
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) return new Response("Unauthorized", { status: 401, headers: corsHeaders });
 
-  const { scenario, messages, learnerContext } = await request.json() as RequestBody;
-  if (!scenario?.title || !scenario?.context || !Array.isArray(messages) || messages.length === 0 || messages.length > 20 || !learnerContext?.plan || !Array.isArray(learnerContext.recommendedDimensions)) {
+  const { scenario, messages, learnerContext, mode = "practice" } = await request.json() as RequestBody;
+  if (!scenario?.title || !scenario?.context || !Array.isArray(messages) || messages.length === 0 || messages.length > 20 || !learnerContext?.plan || !Array.isArray(learnerContext.recommendedDimensions) || !["practice", "advisor"].includes(mode)) {
     return new Response("Invalid request", { status: 400, headers: corsHeaders });
   }
 
@@ -83,9 +86,12 @@ Deno.serve(async (request) => {
   const dimensionLabels: Record<string, string> = { confidence: "اعتمادبه‌نفس", listening: "گوش دادن", expression: "بیان", awareness: "آگاهی اجتماعی", rapport: "ایجاد ارتباط" };
   const focus = learnerContext.recommendedDimensions.map(dimension => dimensionLabels[dimension] || dimension).join(" و ") || "مهارت‌های پایهٔ ارتباطی";
   const progress = `${Math.max(0, learnerContext.completedLessons)} از ${Math.max(1, learnerContext.totalLessons)} درس تکمیل شده است`;
-  const systemInstruction = `تو مربی تمرین مهارت ارتباطی TAROKH هستی. پاسخ‌ها فقط فارسی، محترمانه، کوتاه و عملی باشند. در سناریوی «${scenario.title}» نقش طرف مقابل را بازی کن و پس از پاسخ کاربر، یک بازخورد مشخص و کوتاه بده؛ سپس گفت‌وگو را طبیعی ادامه بده. از فریب، فشار، تحقیر، نقض رضایت یا توصیه درمانی پرهیز کن.
+  const learnerProfile = `پروفایل یادگیرنده: پلن ${learnerContext.plan}، تمرکز پیشنهادی ${focus}، پیشرفت ${progress}. سطح را از شواهد واقعی در پیام‌ها و پیشرفت درس‌ها استنباط کن، نه از نام پلن. پلن فقط عمق و تعداد تمرین‌ها را محدود می‌کند و نشانهٔ سطح واقعی کاربر نیست.`;
+  const systemInstruction = mode === "advisor"
+    ? `تو مشاور هوشمند TAROKH هستی. پاسخ‌ها فقط فارسی، محترمانه، کوتاه و عملی باشند. دربارهٔ نحوهٔ استفاده از سایت، مسیر درس‌ها، تمرین، چالش ماهانه، پلن‌ها و رشد مهارت ارتباطی پاسخ بده. ${learnerProfile} اگر کاربر مشورت، پیشنهاد یا تمرین خواست، حداکثر سه اقدام روشن و متناسب با سطح او بده. برای برنز تمرین را کوتاه و پایه نگه دار؛ برای نقره چالش و بازخورد دقیق‌تری بده؛ برای طلا برنامهٔ چندمرحله‌ای و سناریوهای دشوارتر پیشنهاد کن؛ برای الماس پیگیری منظم، تنوع بیشتر و معیار سنجش مشخص ارائه بده. از فریب، فشار، تحقیر، نقض رضایت یا توصیه درمانی پرهیز کن. اگر پرسش خارج از حوزهٔ سایت یا مهارت ارتباطی بود، کوتاه بگو که در این حوزه نمی‌توانی راهنمایی تخصصی بدهی. فقط JSON معتبر و بدون markdown برگردان: {"content":"پاسخ مشاوره‌ای کوتاه و عملی"}.`
+    : `تو مربی تمرین مهارت ارتباطی TAROKH هستی. پاسخ‌ها فقط فارسی، محترمانه، کوتاه و عملی باشند. در سناریوی «${scenario.title}» نقش طرف مقابل را بازی کن و پس از پاسخ کاربر، یک بازخورد مشخص و کوتاه بده؛ سپس گفت‌وگو را طبیعی ادامه بده. از فریب، فشار، تحقیر، نقض رضایت یا توصیه درمانی پرهیز کن.
 
-پروفایل یادگیرنده: پلن ${learnerContext.plan}، تمرکز پیشنهادی ${focus}، پیشرفت ${progress}. سطح تمرینی را از شواهد واقعی در پیام‌ها و پیشرفت درس‌ها استنباط کن، نه از نام پلن. برای برنز تمرین را کوتاه و پایه نگه دار؛ برای نقره چالش و بازخورد دقیق‌تری بده؛ برای طلا برنامهٔ چندمرحله‌ای و سناریوهای دشوارتر پیشنهاد کن؛ برای الماس پیگیری منظم، تنوع بیشتر و معیار سنجش مشخص ارائه بده. پلن فقط عمق و تعداد تمرین‌ها را محدود می‌کند و نشانهٔ سطح واقعی کاربر نیست. اگر کاربر دربارهٔ برنامهٔ تمرینی پرسید، حداکثر سه اقدام روشن و قابل انجام پیشنهاد بده.
+${learnerProfile} برای برنز تمرین را کوتاه و پایه نگه دار؛ برای نقره چالش و بازخورد دقیق‌تری بده؛ برای طلا برنامهٔ چندمرحله‌ای و سناریوهای دشوارتر پیشنهاد کن؛ برای الماس پیگیری منظم، تنوع بیشتر و معیار سنجش مشخص ارائه بده. اگر کاربر دربارهٔ برنامهٔ تمرینی پرسید، حداکثر سه اقدام روشن و قابل انجام پیشنهاد بده.
 زمینه: ${scenario.context}
 
 فقط JSON معتبر و بدون markdown برگردان: {"content":"پاسخ کوتاه در نقش طرف مقابل","feedback":{"positive":"یک نکتهٔ مثبت مشخص","improvement":"یک پیشنهاد اصلاح مشخص","alternative":"یک پاسخ جایگزین کوتاه"}}.`;
