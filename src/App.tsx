@@ -106,7 +106,7 @@ function SupportWidget({ showButton }: { showButton: boolean }) {
       ["آیا جلسات یا منتورینگ انسانی فعال است؟","خیر. در وضعیت فعلی، بازخورد و برنامهٔ تمرینی از طریق مربی و مشاور AI ارائه می‌شود."],
     ],
     "پشتیبانی":[
-      ["اگر پاسخ سؤالم را اینجا پیدا نکردم چه کنم؟","از طریق تلگرام یا ایمیل با پشتیبانی ارتباط بگیر و در صورت امکان نام کاربری و شرح کوتاه مسئله را بفرست."],
+      ["اگر پاسخ سؤالم را اینجا پیدا نکردم چه کنم؟","از طریق تلگرام یا تماس با پشتیبانی ارتباط بگیر و در صورت امکان نام کاربری و شرح کوتاه مسئله را بفرست."],
       ["چرا یک بخش از سایت برایم باز نمی‌شود؟","ابتدا مطمئن شو وارد حساب شده‌ای و پلن فعالت منقضی نشده است. سپس صفحه را تازه‌سازی کن؛ اگر مشکل باقی ماند با پشتیبانی تماس بگیر."],
     ],
   } as Record<string, Array<[string,string]>>;
@@ -128,7 +128,7 @@ function Home({ go, ...auth }: { go: (p: Page) => void } & HeaderProps) {
         <h1>کاریزما اتفاقی نیست.<br/><em>ساختنی‌ست.</em></h1>
         <p>گام‌به‌گام یاد بگیر چطور با اعتماد‌به‌نفس صحبت کنی، زبان بدنت را کنترل کنی و حضوری ماندگار بسازی.</p>
         <div className="actions">{!auth.authenticated&&<Button onClick={() => go("auth")}>شروع مسیر کاریزما <Icon name="arrow"/></Button>}<button className="text-link" onClick={() => go("pricing")}>مشاهده پلن‌ها</button></div>
-        <div className="proof"><strong>+۲٬۴۰۰</strong><span>مرد در مسیر ساختن<br/>نسخه قدرتمندتر خود</span></div>
+        <div className="proof"><strong>۵ مهارت</strong><span>یک مسیر مرحله‌ای برای<br/>ساختن حضور مؤثر</span></div>
       </div>
       <div className="portrait"><div className="portrait-label"><span>اصل اول</span><strong>حضور، قبل از کلام آغاز می‌شود.</strong></div></div>
     </section>
@@ -138,8 +138,8 @@ function Home({ go, ...auth }: { go: (p: Page) => void } & HeaderProps) {
         {[["C","اعتمادبه‌نفس","Confidence"],["L","گوش دادن","Listening"],["E","بیان","Expression"],["A","آگاهی اجتماعی","Awareness"],["R","ایجاد ارتباط","Rapport"]].map(([a,b,c],i)=><div className={i===0?"current":""} key={a}><b dir="ltr">{a}</b><strong>{b}</strong><small dir="ltr">{c}</small></div>)}
       </div>
     </section>
-    <section className="testimonials"><div className="section-title"><span>تجربه اعضا</span><h2>نتیجه‌ی کسانی که مسیر را رفته‌اند</h2></div><div className="testimonial-row">
-      {[["امیر ر.","نقره","«هنوز در شروع گفت‌وگو کمی مکث دارم، اما حالا می‌دانم چه سؤالی بپرسم و چطور ادامه بدهم.»","۸ هفته","Listening"],["سامان ک.","طلا","«تمرین‌های کوتاه کمکم کرد در جلسه‌ها آرام‌تر حرف بزنم و برای بیان نظرم عجله نکنم.»","۱۲ هفته","Expression"],["نیما ش.","برنز","«تغییر یک‌شبه نبود؛ ولی حالا زبان بدنم را بیشتر می‌شناسم و موقع صحبت کمتر خودم را جمع می‌کنم.»","۶ هفته","Confidence"]].map(([name,plan,quote,time,focus])=><article key={name}><div><strong>{name}</strong><span>{plan}</span></div><blockquote>{quote}</blockquote><small>{time} · تمرکز روی <b dir="ltr">{focus}</b></small></article>)}
+    <section className="testimonials"><div className="section-title"><span>مسیرهای قابل تمرین</span><h2>تغییر با تمرین‌های واقعی ساخته می‌شود</h2></div><div className="testimonial-row">
+      {[ ["اعتمادبه‌نفس","CLEAR","حضور آرام‌تر، صدای مطمئن‌تر و مرزهای روشن‌تر.","Confidence"],["بیان","CLEAR","گفتن نظر در کوتاه‌ترین شکل روشن و محترمانه.","Expression"],["ایجاد ارتباط","CLEAR","ساختن گفت‌وگو با توجه واقعی و دقیق.","Rapport"] ].map(([name,plan,quote,focus])=><article key={name}><div><strong>{name}</strong><span>{plan}</span></div><blockquote>{quote}</blockquote><small>تمرکز روی <b dir="ltr">{focus}</b></small></article>)}
     </div></section>
   </main><Footer go={go}/></>;
 }
@@ -322,7 +322,7 @@ function Dashboard({ go, onLogout, displayName, session, onOpenLesson, activePla
   };
   const leaders=[["ش","شاهین آرام","۱۴"],["ک","کاوشگر شب","۱۲"],["م","مرد مسیر","۱۱"],["ذ","ذهن روشن","۱۰"],["س","سرو استوار","۹"],["ر","رهرو آرام","۹"],["ن","نقطه شروع","۸"],["پ","پلنگ صبور","۷"],["ق","قاب طلایی","۷"],["گ","گام بعدی","۶"]];
   return <><Header go={go} authenticated displayName={displayName} onLogout={onLogout}/><main className="app-page">
-    <div className="welcome"><div><span className="eyebrow">سلام، {displayName || "دوست کاریزما"}</span><h2>امروز یک قدم جلوتر برو.</h2></div><div className="level"><span>سطح فعلی:</span><b>کاوشگر</b></div></div>
+    <div className="welcome"><div><span className="eyebrow">سلام، {displayName || "عضو Charisma Lab"}</span><h2>امروز یک قدم جلوتر برو.</h2></div><div className="level"><span>سطح فعلی:</span><b>کاوشگر</b></div></div>
     <div className="dashboard-grid">
       <section className="today-card"><span className="pill">{nextLesson?`درس بعدی · ${nextLesson.duration_minutes} دقیقه`:"مسیر را کامل کردی"}</span><h3>{nextLesson?.title || "همهٔ درس‌ها تکمیل شدند"}</h3><p>{nextLesson?.summary || "برای مرور نکته‌ها و تمرین‌ها به کتابخانه برگرد."}</p><div className="card-row"><Button onClick={() => nextLesson?onOpenLesson(nextLesson):go("library")}>{nextLesson?"شروع مطالعه":"مشاهده درس‌ها"} <Icon name="arrow"/></Button><div className="day-count"><b>{streak}</b><span>روز پیوسته</span></div></div></section>
       <section className="progress-card"><div className="ring" style={{background:`conic-gradient(var(--gold) ${percentage}%,#292824 0)`}}><div><b>{percentage}٪</b><span>پیشرفت کل</span></div></div><div><span>مسیر یادگیری</span><h3>{nextLesson?.course_modules.learning_paths.title || "CLEAR"}</h3><p>{completedCount} از {lessons.length} درس کامل شده</p><div className="progress"><i style={{width:`${percentage}%`}}/></div></div></section>
@@ -585,7 +585,7 @@ const planComparison = [
   ["گروه خصوصی اعضا", "دارد", "دارد", "دارد"],
   ["جلسهٔ گروهی ماهانه", "پرسش‌وپاسخ", "تخصصی", "تخصصی و اولویت‌دار"],
   ["چالش تمرینی ماهانه", "دارد", "دارد", "دارد"],
-  ["بررسی تمرین توسط منتور", "—", "محدود", "هفتگی"],
+  ["بازخورد و پیگیری AI", "—", "تحلیل دقیق‌تر پاسخ‌ها", "پیگیری هفتگی با مربی AI"],
   ["برنامهٔ شخصی‌سازی‌شده", "—", "پیشنهادی", "کامل و ماهانه"],
   ["چالش‌های سناریومحور", "پایه", "پیشرفته", "متنوع و قابل سنجش"],
   ["پیگیری تمرین‌ها", "—", "—", "هفتگی با مربی AI"],
