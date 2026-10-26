@@ -114,7 +114,7 @@ function SupportWidget({ showButton }: { showButton: boolean }) {
   return <div className={`support-widget ${showButton?"visible":""}`}>
     {open&&<section className="support-panel"><div className="support-head"><div><span>مرکز راهنما</span><b>چطور کمکت کنیم؟</b></div><button aria-label="بستن" onClick={()=>setOpen(false)}><Icon name="close"/></button></div>
       <div className="support-body"><h3>دسته‌بندی راهنما</h3><div className="support-categories">{Object.keys(faqCategories).map(item=><button className={category===item?"active":""} onClick={()=>{setCategory(item);setActive(null)}} key={item}>{item}</button>)}</div><h3>{category}</h3><div className="faq-list">{faqs.map(([question,answer])=><div className={active===question?"active":""} key={question}><button onClick={()=>setActive(active===question?null:question)}><span>{question}</span><b>{active===question?"−":"+"}</b></button>{active===question&&<p>{answer}</p>}</div>)}</div>
-      <h3>ارتباط با پشتیبان</h3><div className="support-links"><a href="https://t.me/tarokhsupport" target="_blank" rel="noreferrer">تلگرام</a><a href="mailto:support@tarokh.ir">ایمیل</a></div></div>
+      <h3>ارتباط با پشتیبان</h3><div className="support-links"><a href="https://t.me/TAROKH_OWNER" target="_blank" rel="noreferrer">تلگرام</a><a href="tel:+989162422026" dir="ltr">۰۹۱۶۲۴۲۲۰۲۶</a></div></div>
     </section>}
     {showButton&&<button className="support-fab" aria-label="پشتیبانی" onClick={()=>setOpen(!open)}><Icon name={open?"close":"chat"}/></button>}
   </div>;
