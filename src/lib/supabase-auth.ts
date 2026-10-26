@@ -293,13 +293,13 @@ export type PublishedLesson = {
   position: number;
   course_modules: {
     title: string;
-    learning_paths: { title: string; position: number };
+    learning_paths: { title: string; dimension: string; position: number };
   };
 };
 
 export async function getPublishedLessons() {
   const { anonKey } = requireConfig();
-  const response = await fetch(endpoint("/rest/v1/lessons?select=id,slug,title,summary,body,duration_minutes,position,course_modules!inner(title,learning_paths!inner(title,position))&is_published=eq.true"), {
+  const response = await fetch(endpoint("/rest/v1/lessons?select=id,slug,title,summary,body,duration_minutes,position,course_modules!inner(title,learning_paths!inner(title,dimension,position))&is_published=eq.true"), {
     headers: { apikey: anonKey },
   });
   if (!response.ok) throw new Error("دریافت درس‌ها انجام نشد.");
@@ -350,6 +350,27 @@ export async function completeExercise(session: AuthSession, lessonId: string) {
     body: JSON.stringify({ user_id: session.user.id, lesson_id: lessonId, exercise_completed_at: new Date().toISOString() }),
   });
   if (!response.ok) throw new Error("ثبت انجام تمرین انجام نشد.");
+}
+
+export type MonthlyChallengeProgress = { challenge_key: string; completed_at: string | null };
+
+export async function getMonthlyChallengeProgress(session: AuthSession, monthStart: string) {
+  const { anonKey } = requireConfig();
+  const response = await fetch(endpoint(`/rest/v1/monthly_challenge_progress?user_id=eq.${encodeURIComponent(session.user.id)}&month_start=eq.${monthStart}&select=challenge_key,completed_at`), {
+    headers: { apikey: anonKey, Authorization: `Bearer ${session.access_token}` },
+  });
+  if (!response.ok) throw new Error("دریافت وضعیت چالش ماهانه انجام نشد.");
+  return await response.json() as MonthlyChallengeProgress[];
+}
+
+export async function completeMonthlyChallenge(session: AuthSession, challengeKey: string, monthStart: string) {
+  const { anonKey } = requireConfig();
+  const response = await fetch(endpoint("/rest/v1/monthly_challenge_progress?on_conflict=user_id,month_start,challenge_key"), {
+    method: "POST",
+    headers: { apikey: anonKey, Authorization: `Bearer ${session.access_token}`, "Content-Type": "application/json", Prefer: "resolution=merge-duplicates" },
+    body: JSON.stringify({ user_id: session.user.id, challenge_key: challengeKey, month_start: monthStart, completed_at: new Date().toISOString() }),
+  });
+  if (!response.ok) throw new Error("ثبت چالش ماهانه انجام نشد.");
 }
 
 function clearSession() {

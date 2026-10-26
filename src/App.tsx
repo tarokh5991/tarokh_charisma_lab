@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { activateDemoPlan, completeExercise, completeLesson, createCoachConversation, deleteAccount, deleteCoachConversation, getActivePlan, getCoachConversation, getCoachMessages, getCoachQuota, getLatestAssessment, getLessonProgress, getPublishedLessons, getPurchaseHistory, getStoredSession, getUserProfile, requestCoachReply, requestOtp, restoreSession, saveAssessment, saveCoachMessage, saveSession, signOut, updateUserProfile, verifyOtp, type AuthSession, type ActivePlan, type CoachMessage, type CoachQuota, type PublishedLesson, type PurchaseRecord, type UserProfile } from "./lib/supabase-auth";
+import { activateDemoPlan, completeExercise, completeLesson, completeMonthlyChallenge, createCoachConversation, deleteAccount, deleteCoachConversation, getActivePlan, getCoachConversation, getCoachMessages, getCoachQuota, getLatestAssessment, getLessonProgress, getMonthlyChallengeProgress, getPublishedLessons, getPurchaseHistory, getStoredSession, getUserProfile, requestCoachReply, requestOtp, restoreSession, saveAssessment, saveCoachMessage, saveSession, signOut, updateUserProfile, verifyOtp, type AuthSession, type ActivePlan, type CoachMessage, type CoachQuota, type PublishedLesson, type PurchaseRecord, type UserProfile } from "./lib/supabase-auth";
 
 type Page = "home" | "about" | "auth" | "dashboard" | "library" | "lesson" | "coach" | "pricing" | "checkout" | "profile";
 
@@ -237,7 +237,7 @@ function Auth({ go, onAuthenticated }: { go: (p: Page) => void; onAuthenticated:
   </main></>;
 }
 
-function Dashboard({ go, onLogout, displayName, session, onOpenLesson }: { go: (p: Page) => void; onLogout: () => void; displayName?: string; session: AuthSession; onOpenLesson: (lesson: PublishedLesson) => void }) {
+function Dashboard({ go, onLogout, displayName, session, onOpenLesson, activePlan }: { go: (p: Page) => void; onLogout: () => void; displayName?: string; session: AuthSession; onOpenLesson: (lesson: PublishedLesson) => void; activePlan: ActivePlan | null }) {
   const [showLeaders,setShowLeaders]=useState(false);
   const [showMe,setShowMe]=useState(true);
   const [lessons,setLessons]=useState<PublishedLesson[]>([]);
@@ -245,6 +245,16 @@ function Dashboard({ go, onLogout, displayName, session, onOpenLesson }: { go: (
   const [streak,setStreak]=useState(0);
   const [history,setHistory]=useState<Array<{ title: string; type: string; at: string }>>([]);
   const [recommendedDimensions,setRecommendedDimensions]=useState<string[]>([]);
+  const [monthlyChallengeCompleted,setMonthlyChallengeCompleted]=useState(false);
+  const [monthlyChallengeSaving,setMonthlyChallengeSaving]=useState(false);
+  const [monthlyChallengeMessage,setMonthlyChallengeMessage]=useState("");
+  const challenges: Record<string,{ title: string; description: string; steps: string[]; success: string }>={
+    confidence:{title:"سه مکث محکم",description:"در سه گفت‌وگوی واقعی، ریتم و پایان جمله‌هایت را آگاهانه کنترل کن.",steps:["پیش از پاسخ، یک مکث کوتاه داشته باش.","یک جمله را آرام و بدون عجله کامل کن.","پایان جمله را محکم و بدون عذرخواهی اضافه بگو."],success:"سه مکالمه را با یادداشت یک نکته از هرکدام تمام کن."},
+    listening:{title:"نقشهٔ شنیدن",description:"یک گفت‌وگو را با شنیدن فعال و پیگیری دقیق جلو ببر.",steps:["یک نکتهٔ مشخص از حرف طرف مقابل را تکرار کن.","یک سؤال باز و مرتبط بپرس.","تا پیش از پاسخ خودت، اجازه بده او جمله‌اش را کامل کند."],success:"در پایان، دو نکته‌ای را که واقعاً از طرف مقابل فهمیدی یادداشت کن."},
+    expression:{title:"پاسخ ۳۰ ثانیه‌ای",description:"نظرت را کوتاه، روشن و محترمانه در یک موقعیت واقعی بیان کن.",steps:["نظر اصلی‌ات را در یک جمله بگو.","فقط یک دلیل روشن به آن اضافه کن.","با یک پیشنهاد یا سؤال کوتاه جمع‌بندی کن."],success:"پاسخت را بعد از گفت‌وگو در سه جمله یا کمتر بنویس."},
+    awareness:{title:"سه نشانه، یک تنظیم",description:"در دو گفت‌وگو نشانه‌های توجه و انرژی را ببین و رفتارت را تنظیم کن.",steps:["سه نشانهٔ رفتاری مانند تماس چشمی، مکث یا کوتاهی پاسخ‌ها را ببین.","به‌جای نتیجه‌گیری قطعی، یک احتمال بنویس.","اگر نشانهٔ بی‌حوصلگی دیدی، موضوع را کوتاه کن یا محترمانه بپرس."],success:"یک نمونه از تنظیم محترمانهٔ گفت‌وگو را یادداشت کن."},
+    rapport:{title:"توجه دقیق",description:"با یک تعریف واقعی و بازگشت به حرف قبلی، ارتباطی طبیعی بساز.",steps:["یک جزئیات واقعی را که دیده‌ای نام ببر.","تعریفت را کوتاه و بدون اغراق بگو.","به یک حرف قبلیِ طرف مقابل برگرد و درباره‌اش بپرس."],success:"واکنش طرف مقابل و چیزی را که دربارهٔ او فهمیدی ثبت کن."},
+  };
   const dimensions:Record<string,[string,string]>={
     confidence:["اعتمادبه‌نفس","حضور آرام و مرزهای روشن را در خودت تقویت کن."],
     listening:["گوش دادن","گفت‌وگو را با شنیدن دقیق پیش ببر."],
@@ -266,12 +276,27 @@ function Dashboard({ go, onLogout, displayName, session, onOpenLesson }: { go: (
           ...(item.exercise_completed_at?[{title:lesson.title,type:"انجام تمرین",at:item.exercise_completed_at}]:[]),
         ];
       }).sort((first,second)=>new Date(second.at).getTime()-new Date(first.at).getTime()));
+      const challengeKey=recommendations[0] || published[0]?.course_modules.learning_paths.dimension;
+      if(challengeKey) getMonthlyChallengeProgress(session,new Date().toISOString().slice(0,7)+"-01").then(items=>setMonthlyChallengeCompleted(items.some(item=>item.challenge_key===challengeKey&&Boolean(item.completed_at)))).catch(()=>{});
     }).catch(()=>{});
   },[session]);
   const completedCount=completedIds.size;
   const unlockedLessons=lessons.filter((lesson,index)=>index===0||completedIds.has(lessons[index-1].id));
   const nextLesson=unlockedLessons.find(lesson=>!completedIds.has(lesson.id));
   const percentage=lessons.length?Math.round(completedCount/lessons.length*100):0;
+  const monthlyChallengeKey=recommendedDimensions[0] || nextLesson?.course_modules.learning_paths.dimension || "confidence";
+  const monthlyChallenge=challenges[monthlyChallengeKey] || challenges.confidence;
+  const monthlyChallengeAvailable=["نقره","طلا","الماس"].includes(activePlan?.name || "");
+  const completeChallenge=async()=>{
+    if(!monthlyChallengeAvailable||monthlyChallengeSaving) return;
+    setMonthlyChallengeSaving(true); setMonthlyChallengeMessage("");
+    try {
+      await completeMonthlyChallenge(session,monthlyChallengeKey,new Date().toISOString().slice(0,7)+"-01");
+      setMonthlyChallengeCompleted(true);
+    } catch(error) {
+      setMonthlyChallengeMessage(error instanceof Error?error.message:"ثبت چالش ماهانه انجام نشد.");
+    } finally { setMonthlyChallengeSaving(false); }
+  };
   const leaders=[["ش","شاهین آرام","۱۴"],["ک","کاوشگر شب","۱۲"],["م","مرد مسیر","۱۱"],["ذ","ذهن روشن","۱۰"],["س","سرو استوار","۹"],["ر","رهرو آرام","۹"],["ن","نقطه شروع","۸"],["پ","پلنگ صبور","۷"],["ق","قاب طلایی","۷"],["گ","گام بعدی","۶"]];
   return <><Header go={go} authenticated displayName={displayName} onLogout={onLogout}/><main className="app-page">
     <div className="welcome"><div><span className="eyebrow">سلام، {displayName || "دوست کاریزما"}</span><h2>امروز یک قدم جلوتر برو.</h2></div><div className="level"><span>سطح فعلی:</span><b>کاوشگر</b></div></div>
@@ -280,6 +305,7 @@ function Dashboard({ go, onLogout, displayName, session, onOpenLesson }: { go: (
       <section className="progress-card"><div className="ring" style={{background:`conic-gradient(var(--gold) ${percentage}%,#292824 0)`}}><div><b>{percentage}٪</b><span>پیشرفت کل</span></div></div><div><span>مسیر یادگیری</span><h3>{nextLesson?.course_modules.learning_paths.title || "CLEAR"}</h3><p>{completedCount} از {lessons.length} درس کامل شده</p><div className="progress"><i style={{width:`${percentage}%`}}/></div></div></section>
     </div>
     {recommendedDimensions.length>0&&<section className="recommended-focus"><span className="eyebrow">بر اساس ارزیابی اولیه</span><h3>تمرکز مسیر تو</h3><p>دو مهارتی که بیشترین اثر را در شروع مسیرت دارند.</p><div>{recommendedDimensions.slice(0,2).filter(dimension=>dimensions[dimension]).map(dimension=><article key={dimension}><b>{dimensions[dimension][0]}</b><span>{dimensions[dimension][1]}</span></article>)}</div></section>}
+    <section className={`monthly-challenge ${monthlyChallengeAvailable?"":"locked"}`}><div><span className="eyebrow">چالش ماهانهٔ پیشنهادی</span><h3>{monthlyChallenge.title}</h3><p>{monthlyChallenge.description}</p><ol>{monthlyChallenge.steps.map(step=><li key={step}>{step}</li>)}</ol><small>معیار انجام: {monthlyChallenge.success}</small></div>{monthlyChallengeAvailable?<div className="challenge-action">{monthlyChallengeCompleted?<span>چالش این ماه انجام شد.</span>:<Button onClick={completeChallenge} disabled={monthlyChallengeSaving}>{monthlyChallengeSaving?"در حال ثبت…":"چالش را انجام دادم"}</Button>}{monthlyChallengeMessage&&<small>{monthlyChallengeMessage}</small>}</div>:<div className="challenge-action"><span>چالش ماهانه در پلن نقره و بالاتر فعال است.</span><Button ghost onClick={()=>go("pricing")}>مشاهدهٔ پلن‌ها <Icon name="arrow"/></Button></div>}</section>
     <div className="section-head"><h3>ادامه مسیر</h3><button onClick={() => go("library")}>مشاهده همه</button></div>
     {nextLesson?<div className="lesson-row"><span>{String(lessons.indexOf(nextLesson)+1).padStart(2,"0")}</span><div><small>{nextLesson.course_modules.learning_paths.title}</small><h3>{nextLesson.title}</h3><p>{nextLesson.summary}</p></div><Button onClick={() => onOpenLesson(nextLesson)} ghost><Icon name="play"/> ادامه درس</Button></div>:<p className="library-state">همهٔ درس‌های موجود را تکمیل کرده‌ای.</p>}
     <section className="learning-history"><div className="section-head"><h3>تاریخچهٔ یادگیری</h3></div>{history.length?<div>{history.slice(0,5).map(activity=><div className="history-row" key={`${activity.type}-${activity.at}`}><div><strong>{activity.type}</strong><span>{activity.title}</span></div><time>{new Intl.DateTimeFormat("fa-IR",{month:"long",day:"numeric"}).format(new Date(activity.at))}</time></div>)}</div>:<p>هنوز فعالیتی ثبت نشده است.</p>}</section>
@@ -682,5 +708,5 @@ export default function App() {
   const displayName=profile?.username || profile?.display_name || session?.user.user_metadata?.username || session?.user.user_metadata?.display_name;
   const visiblePage=!session && protectedPages.includes(page)?"auth":page;
   const headerAuth={authenticated:Boolean(session),displayName,onLogout:logout};
-  return <div dir="rtl">{visiblePage==="home"?<Home go={go} {...headerAuth}/>:visiblePage==="about"?<About go={go} {...headerAuth}/>:visiblePage==="auth"?<Auth go={go} onAuthenticated={authenticated}/>:visiblePage==="dashboard"?<Dashboard go={go} displayName={displayName} onLogout={logout} session={session!} onOpenLesson={openLesson}/>:visiblePage==="library"?<Library go={go} onOpenLesson={openLesson} session={session!} {...headerAuth}/>:visiblePage==="profile"?<Profile go={go} session={session!} profile={profile} activePlan={activePlan} onUpdateUsername={updateUsername} onDeleteAccount={removeAccount} {...headerAuth}/>:visiblePage==="lesson"?<Lesson go={go} lesson={activeLesson} session={session!} onOpenCoach={openCoach} {...headerAuth}/>:visiblePage==="coach"?<Coach go={go} session={session!} initialScenario={activeCoachScenario} activePlan={activePlan} {...headerAuth}/>:visiblePage==="pricing"?<Pricing go={go} choose={setPlan} activePlan={activePlan} {...headerAuth}/>:<Checkout go={go} plan={plan} session={session!} onActivated={activatePlan} {...headerAuth}/>}<SupportWidget showButton={visiblePage==="home"||visiblePage==="dashboard"}/></div>;
+  return <div dir="rtl">{visiblePage==="home"?<Home go={go} {...headerAuth}/>:visiblePage==="about"?<About go={go} {...headerAuth}/>:visiblePage==="auth"?<Auth go={go} onAuthenticated={authenticated}/>:visiblePage==="dashboard"?<Dashboard go={go} displayName={displayName} onLogout={logout} session={session!} onOpenLesson={openLesson} activePlan={activePlan}/>:visiblePage==="library"?<Library go={go} onOpenLesson={openLesson} session={session!} {...headerAuth}/>:visiblePage==="profile"?<Profile go={go} session={session!} profile={profile} activePlan={activePlan} onUpdateUsername={updateUsername} onDeleteAccount={removeAccount} {...headerAuth}/>:visiblePage==="lesson"?<Lesson go={go} lesson={activeLesson} session={session!} onOpenCoach={openCoach} {...headerAuth}/>:visiblePage==="coach"?<Coach go={go} session={session!} initialScenario={activeCoachScenario} activePlan={activePlan} {...headerAuth}/>:visiblePage==="pricing"?<Pricing go={go} choose={setPlan} activePlan={activePlan} {...headerAuth}/>:<Checkout go={go} plan={plan} session={session!} onActivated={activatePlan} {...headerAuth}/>}<SupportWidget showButton={visiblePage==="home"||visiblePage==="dashboard"}/></div>;
 }
