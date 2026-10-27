@@ -373,6 +373,67 @@ export async function completeMonthlyChallenge(session: AuthSession, challengeKe
   if (!response.ok) throw new Error("ثبت چالش ماهانه انجام نشد.");
 }
 
+export type AdminOverview = {
+  totals: {
+    users: number;
+    learners: number;
+    active_entitlements: number;
+    paid_orders: number;
+    revenue_toman: number;
+    ai_messages_today: number;
+    ai_messages_all_time: number;
+    lesson_completions: number;
+    exercise_completions: number;
+    lessons_published: number;
+  };
+  plans: Array<{ name: string; count: number }>;
+  usage: Array<{ date: string; count: number }>;
+  orders: Array<{ id: string; customer_name: string | null; username: string | null; plan: string; amount_toman: number; status: string; created_at: string }>;
+  users: Array<{ id: string; username: string | null; display_name: string | null; role: string; created_at: string; plan: string | null; plan_ends_at: string | null; completed_lessons: number; ai_messages: number }>;
+};
+
+export async function getAdminOverview(session: AuthSession) {
+  const { anonKey } = requireConfig();
+  const response = await fetch(endpoint("/rest/v1/rpc/admin_overview"), {
+    method: "POST",
+    headers: { apikey: anonKey, Authorization: `Bearer ${session.access_token}`, "Content-Type": "application/json" },
+    body: "{}",
+  });
+  if (!response.ok) throw new Error("دریافت گزارش مدیریتی انجام نشد.");
+  return await response.json() as AdminOverview;
+}
+
+export type AdminLesson = {
+  id: string;
+  slug: string;
+  title: string;
+  summary: string;
+  position: number;
+  is_published: boolean;
+  duration_minutes: number;
+  course_modules: { title: string; learning_paths: { title: string; position: number } };
+};
+
+export async function getAdminLessons(session: AuthSession) {
+  const { anonKey } = requireConfig();
+  const response = await fetch(endpoint("/rest/v1/lessons?select=id,slug,title,summary,position,is_published,duration_minutes,course_modules!inner(title,learning_paths!inner(title,position))"), {
+    headers: { apikey: anonKey, Authorization: `Bearer ${session.access_token}` },
+  });
+  if (!response.ok) throw new Error("دریافت فهرست درس‌ها انجام نشد.");
+  const lessons = await response.json() as AdminLesson[];
+  return lessons.sort((first, second) => first.course_modules.learning_paths.position - second.course_modules.learning_paths.position || first.position - second.position);
+}
+
+export async function setLessonPublished(session: AuthSession, lessonId: string, published: boolean) {
+  const { anonKey } = requireConfig();
+  const response = await fetch(endpoint("/rest/v1/rpc/admin_set_lesson_published"), {
+    method: "POST",
+    headers: { apikey: anonKey, Authorization: `Bearer ${session.access_token}`, "Content-Type": "application/json" },
+    body: JSON.stringify({ target_lesson_id: lessonId, published }),
+  });
+  if (!response.ok) throw new Error("تغییر وضعیت انتشار درس انجام نشد.");
+}
+
 function clearSession() {
   localStorage.removeItem("tarokh-auth-session");
 }

@@ -1,9 +1,9 @@
 import { useEffect, useState } from "react";
-import { activateDemoPlan, completeExercise, completeLesson, completeMonthlyChallenge, createCoachConversation, deleteAccount, deleteCoachConversation, getActivePlan, getCoachConversation, getCoachMessages, getCoachQuota, getLatestAssessment, getLessonProgress, getMonthlyChallengeProgress, getPublishedLessons, getPurchaseHistory, getStoredSession, getUserProfile, requestCoachReply, requestOtp, restoreSession, saveAssessment, saveCoachMessage, saveSession, signOut, updateUserProfile, verifyOtp, type AuthSession, type ActivePlan, type CoachMessage, type CoachQuota, type PublishedLesson, type PurchaseRecord, type UserProfile } from "./lib/supabase-auth";
+import { activateDemoPlan, completeExercise, completeLesson, completeMonthlyChallenge, createCoachConversation, deleteAccount, deleteCoachConversation, getActivePlan, getAdminLessons, getAdminOverview, getCoachConversation, getCoachMessages, getCoachQuota, getLatestAssessment, getLessonProgress, getMonthlyChallengeProgress, getPublishedLessons, getPurchaseHistory, getStoredSession, getUserProfile, requestCoachReply, requestOtp, restoreSession, saveAssessment, saveCoachMessage, saveSession, setLessonPublished, signOut, updateUserProfile, verifyOtp, type AdminLesson, type AdminOverview, type AuthSession, type ActivePlan, type CoachMessage, type CoachQuota, type PublishedLesson, type PurchaseRecord, type UserProfile } from "./lib/supabase-auth";
 
-type Page = "home" | "about" | "auth" | "dashboard" | "library" | "lesson" | "coach" | "pricing" | "checkout" | "profile";
+type Page = "home" | "about" | "auth" | "dashboard" | "library" | "lesson" | "coach" | "pricing" | "checkout" | "profile" | "admin";
 
-const pages: Page[] = ["home", "about", "auth", "dashboard", "library", "lesson", "coach", "pricing", "checkout", "profile"];
+const pages: Page[] = ["home", "about", "auth", "dashboard", "library", "lesson", "coach", "pricing", "checkout", "profile", "admin"];
 
 function pageFromHash() {
   const page = window.location.hash.slice(1) as Page;
@@ -54,17 +54,17 @@ const Button = ({ children, onClick, ghost = false, block = false, disabled = fa
   <button className={`btn ${ghost ? "btn-ghost" : ""} ${block ? "btn-block" : ""}`} onClick={onClick} disabled={disabled}>{children}</button>
 );
 
-type HeaderProps = { authenticated?: boolean; displayName?: string; onLogout?: () => void };
+type HeaderProps = { authenticated?: boolean; displayName?: string; onLogout?: () => void; isAdmin?: boolean };
 
-const Header = ({ go, simple = false, authenticated = false, displayName, onLogout }: { go: (p: Page) => void; simple?: boolean } & HeaderProps) => {
+const Header = ({ go, simple = false, authenticated = false, displayName, onLogout, isAdmin = false }: { go: (p: Page) => void; simple?: boolean } & HeaderProps) => {
   const [menuOpen,setMenuOpen]=useState(false);
   const navigate=(page:Page)=>{setMenuOpen(false);go(page)};
   const openSupport=()=>{setMenuOpen(false);window.dispatchEvent(new Event("open-support"))};
   return <header className="header">
     <button className="brand" onClick={() => navigate("home")}><span>TAROKH</span><small>CHARISMA LAB</small></button>
-    {!simple && <nav><button onClick={() => navigate("home")}>خانه</button><button onClick={() => navigate("dashboard")}>آکادمی</button><button onClick={() => navigate("coach")}>مربی AI</button><button onClick={() => navigate("pricing")}>پلن‌ها</button><button onClick={() => navigate("about")}>درباره ما</button><button onClick={openSupport}>پشتیبانی</button></nav>}
+    {!simple && <nav><button onClick={() => navigate("home")}>خانه</button><button onClick={() => navigate("dashboard")}>آکادمی</button><button onClick={() => navigate("coach")}>مربی AI</button><button onClick={() => navigate("pricing")}>پلن‌ها</button><button onClick={() => navigate("about")}>درباره ما</button><button onClick={openSupport}>پشتیبانی</button>{isAdmin&&<button onClick={() => navigate("admin")}>مدیریت</button>}</nav>}
     {!simple && <button className="menu-toggle" aria-label={menuOpen?"بستن منو":"باز کردن منو"} aria-expanded={menuOpen} onClick={()=>setMenuOpen(!menuOpen)}><Icon name={menuOpen?"closeMenu":"menu"}/></button>}
-    {!simple&&menuOpen&&<div className="mobile-menu"><button onClick={()=>navigate("home")}><Icon name="home"/><span>خانه</span></button><button onClick={()=>navigate("dashboard")}><Icon name="book"/><span>آکادمی</span></button><button onClick={()=>navigate("coach")}><Icon name="chat"/><span>مربی AI</span></button><button onClick={()=>navigate("pricing")}><Icon name="tag"/><span>پلن‌ها</span></button><button onClick={()=>navigate("about")}><Icon name="info"/><span>درباره ما</span></button><button onClick={openSupport}><Icon name="help"/><span>پشتیبانی</span></button>{authenticated?<><button onClick={()=>navigate("profile")}><Icon name="user"/><span>حساب من{displayName?` · ${displayName}`:""}</span></button>{onLogout&&<button onClick={()=>{setMenuOpen(false);onLogout()}}><Icon name="logout"/><span>خروج</span></button>}</>:<button onClick={()=>navigate("auth")}><Icon name="login"/><span>ورود / ثبت‌نام</span></button>}</div>}
+    {!simple&&menuOpen&&<div className="mobile-menu"><button onClick={()=>navigate("home")}><Icon name="home"/><span>خانه</span></button><button onClick={()=>navigate("dashboard")}><Icon name="book"/><span>آکادمی</span></button><button onClick={()=>navigate("coach")}><Icon name="chat"/><span>مربی AI</span></button><button onClick={()=>navigate("pricing")}><Icon name="tag"/><span>پلن‌ها</span></button><button onClick={()=>navigate("about")}><Icon name="info"/><span>درباره ما</span></button><button onClick={openSupport}><Icon name="help"/><span>پشتیبانی</span></button>{authenticated?<><button onClick={()=>navigate("profile")}><Icon name="user"/><span>حساب من{displayName?` · ${displayName}`:""}</span></button>{isAdmin&&<button onClick={()=>navigate("admin")}><Icon name="lock"/><span>مدیریت</span></button>}{onLogout&&<button onClick={()=>{setMenuOpen(false);onLogout()}}><Icon name="logout"/><span>خروج</span></button>}</>:<button onClick={()=>navigate("auth")}><Icon name="login"/><span>ورود / ثبت‌نام</span></button>}</div>}
     {authenticated ? <div className="account-actions"><button className="header-user" onClick={() => navigate("profile")}>{displayName || "حساب من"}</button><Button onClick={onLogout} ghost>خروج</Button></div> : <Button onClick={() => navigate("auth")} ghost>ورود / ثبت‌نام</Button>}
   </header>;
 };
@@ -572,6 +572,64 @@ function Coach({ go, session, initialScenario, activePlan, ...auth }: { go: (p: 
   </main><BottomNav page="coach" go={go}/></>;
 }
 
+const formatNumber = (value: number) => value.toLocaleString("fa-IR");
+
+const adminTabs = [
+  ["overview","نمای کلی"],
+  ["users","کاربران"],
+  ["orders","سفارش‌ها"],
+  ["lessons","درس‌ها"],
+] as const;
+
+function Admin({ go, session, ...auth }: { go: (p: Page) => void; session: AuthSession } & HeaderProps) {
+  const [tab,setTab]=useState<string>("overview");
+  const [overview,setOverview]=useState<AdminOverview|null>(null);
+  const [lessons,setLessons]=useState<AdminLesson[]>([]);
+  const [loading,setLoading]=useState(true);
+  const [message,setMessage]=useState("");
+  const [busyLesson,setBusyLesson]=useState<string|null>(null);
+  const [reloading,setReloading]=useState(false);
+  const load=async(quiet=false)=>{
+    if(quiet) setReloading(true); else setLoading(true);
+    setMessage("");
+    try {
+      const [nextOverview,nextLessons]=await Promise.all([getAdminOverview(session),getAdminLessons(session)]);
+      setOverview(nextOverview);
+      setLessons(nextLessons);
+    } catch(error) {
+      setMessage(error instanceof Error ? error.message : "دریافت گزارش مدیریتی انجام نشد.");
+    } finally { setLoading(false); setReloading(false); }
+  };
+  useEffect(()=>{ load(); },[session]);
+  const togglePublish=async(lesson:AdminLesson)=>{
+    setBusyLesson(lesson.id); setMessage("");
+    try {
+      await setLessonPublished(session, lesson.id, !lesson.is_published);
+      setLessons(current=>current.map(item=>item.id===lesson.id?{...item,is_published:!item.is_published}:item));
+      const nextOverview=await getAdminOverview(session);
+      setOverview(nextOverview);
+    } catch(error) {
+      setMessage(error instanceof Error ? error.message : "تغییر وضعیت انتشار درس انجام نشد.");
+    } finally { setBusyLesson(null); }
+  };
+  const usageMax=Math.max(1,...(overview?.usage.map(item=>item.count) || [1]));
+  return <><Header go={go} {...auth}/><main className="app-page admin-page">
+    <div className="admin-heading"><div><span className="eyebrow">پنل مدیریت</span><h1>عملیات Charisma Lab</h1><p>وضعیت کاربران، فروش، مصرف AI و محتوای دوره</p></div><button className="back" onClick={()=>load(true)} disabled={loading||reloading}><Icon name="reset"/> {reloading?"در حال به‌روزرسانی…":"به‌روزرسانی"}</button></div>
+    <div className="admin-tabs">{adminTabs.map(([key,label])=><button className={tab===key?"active":""} onClick={()=>{setTab(key);setMessage("")}} key={key}>{label}</button>)}</div>
+    {message&&<p className="admin-error">{message}</p>}
+    {loading&&!overview?<p className="admin-loading">در حال دریافت اطلاعات…</p>:overview&&<>
+      {tab==="overview"&&<>
+        <section className="admin-stats">{[["کاربران",formatNumber(overview.totals.users)],["پلن‌های فعال",formatNumber(overview.totals.active_entitlements)],["خرید موفق",formatNumber(overview.totals.paid_orders)],["درآمد (تومان)",formatNumber(overview.totals.revenue_toman)],["پیام AI امروز",formatNumber(overview.totals.ai_messages_today)],["کل پیام AI",formatNumber(overview.totals.ai_messages_all_time)],["تکمیل درس",formatNumber(overview.totals.lesson_completions)],["تکمیل تمرین",formatNumber(overview.totals.exercise_completions)]].map(([label,value])=><article key={label}><span>{label}</span><strong>{value}</strong></article>)}</section>
+        <section className="admin-panel"><h3>توزیع پلن‌های فعال</h3>{overview.plans.length===0?<p>هیچ پلن فعالی وجود ندارد.</p>:<div className="admin-bars">{overview.plans.map(item=>{const percent=Math.round(item.count/Math.max(1,overview.totals.active_entitlements)*100);return <div key={item.name}><span>{item.name}</span><div><i style={{width:`${percent}%`}}/></div><b>{formatNumber(item.count)}</b></div>})}</div>}</section>
+        <section className="admin-panel"><h3>مصرف AI در ۱۴ روز گذشته</h3>{overview.usage.length===0?<p>مصرفی ثبت نشده است.</p>:<div className="admin-usage">{overview.usage.slice().reverse().map(item=><div key={item.date}><span>{new Date(item.date).toLocaleDateString("fa-IR",{month:"short",day:"numeric"})}</span><div><i style={{height:`${Math.max(4,Math.round(item.count/usageMax*100))}%`}}/></div><b>{formatNumber(item.count)}</b></div>)}</div>}</section>
+      </>}
+      {tab==="users"&&<section className="admin-panel"><h3>آخرین کاربران ({formatNumber(overview.users.length)})</h3><div className="admin-table-wrap"><table className="admin-table"><thead><tr><th>کاربر</th><th>نقش</th><th>پلن فعال</th><th>تا</th><th>درس تکمیل‌شده</th><th>پیام AI</th><th>عضویت</th></tr></thead><tbody>{overview.users.map(user=><tr key={user.id}><td>{user.username || user.display_name || "بدون نام"}</td><td>{user.role==="admin"?"مدیر":user.role==="mentor"?"منتور":"یادگیرنده"}</td><td>{user.plan || "—"}</td><td>{user.plan_ends_at?new Date(user.plan_ends_at).toLocaleDateString("fa-IR"):"—"}</td><td>{formatNumber(user.completed_lessons)}</td><td>{formatNumber(user.ai_messages)}</td><td>{new Date(user.created_at).toLocaleDateString("fa-IR")}</td></tr>)}</tbody></table></div></section>}
+      {tab==="orders"&&<section className="admin-panel"><h3>آخرین سفارش‌ها ({formatNumber(overview.orders.length)})</h3>{overview.orders.length===0?<p>هنوز سفارشی ثبت نشده است.</p>:<div className="admin-table-wrap"><table className="admin-table"><thead><tr><th>خریدار</th><th>کاربر</th><th>پلن</th><th>مبلغ (تومان)</th><th>وضعیت</th><th>تاریخ</th></tr></thead><tbody>{overview.orders.map(order=><tr key={order.id}><td>{order.customer_name || "—"}</td><td>{order.username || "—"}</td><td>{order.plan}</td><td>{formatNumber(order.amount_toman)}</td><td>{order.status==="paid"?"پرداخت‌شده":order.status==="pending"?"در انتظار":order.status==="refunded"?"بازگشت‌داده‌شده":"ناموفق"}</td><td>{new Date(order.created_at).toLocaleDateString("fa-IR")}</td></tr>)}</tbody></table></div>}</section>}
+      {tab==="lessons"&&<section className="admin-panel"><h3>درس‌ها ({formatNumber(lessons.filter(item=>item.is_published).length)} منتشرشده از {formatNumber(lessons.length)})</h3><div className="admin-lessons">{lessons.map(lesson=><div className="admin-lesson" key={lesson.id}><div><span>{lesson.course_modules.learning_paths.title} · جایگاه {lesson.position}</span><strong>{lesson.title}</strong><small>{lesson.duration_minutes} دقیقه</small></div><button className={`publish-toggle ${lesson.is_published?"on":""}`} disabled={busyLesson===lesson.id} onClick={()=>togglePublish(lesson)}>{busyLesson===lesson.id?"…":lesson.is_published?"منتشرشده":"پیش‌نویس"}</button></div>)}</div></section>}
+    </>}
+  </main><BottomNav page="dashboard" go={go}/></>;
+}
+
 const plans = [
   {name:"برنز",slug:"bronze",price:"۲٫۵",desc:"شروع اصولی و مستقل",items:["ورود امن با OTP و حساب پایدار","ارزیابی اولیهٔ CLEAR و پیشنهاد مسیر شروع","دسترسی کامل به دوره","کتابخانهٔ درس‌های مرحله‌ای","تمرین‌های عملی هر درس","داشبورد پیشرفت، streak و تاریخچه"]},
   {name:"نقره",slug:"silver",price:"۳٫۵",desc:"تمرین با همراهی بیشتر",items:["تمام امکانات برنز","مربی AI سناریومحور، روزانه ۳۰ پیام","تاریخچهٔ گفتگو و بازخورد ساختاریافته","برنامهٔ تمرینی AI متناسب با پیشرفت","چالش تمرینی ماهانه","تحلیل دقیق‌تر پاسخ‌ها"]},
@@ -632,7 +690,7 @@ export default function App() {
   const [activePlan,setActivePlan]=useState<ActivePlan|null>(null);
   const [planResolved,setPlanResolved]=useState(false);
   const [plan,setPlan]=useState("طلا");
-  const protectedPages:Page[]=["dashboard","library","lesson","coach","checkout","profile"];
+  const protectedPages:Page[]=["dashboard","library","lesson","coach","checkout","profile","admin"];
   const planRequiredPages:Page[]=["dashboard","library","lesson","coach"];
   useEffect(()=>{
     let active=true;
@@ -696,6 +754,12 @@ export default function App() {
       setPage("pricing");
     }
   },[session,planResolved,activePlan,page]);
+  useEffect(()=>{
+    if(page==="admin" && profile && profile.role!=="admin"){
+      window.location.hash="dashboard";
+      setPage("dashboard");
+    }
+  },[page,profile]);
   const openLesson=(lesson:PublishedLesson)=>{
     setActiveLesson(lesson);
     go("lesson");
@@ -742,6 +806,6 @@ export default function App() {
   };
   const displayName=profile?.username || profile?.display_name || session?.user.user_metadata?.username || session?.user.user_metadata?.display_name;
   const visiblePage=!session && protectedPages.includes(page)?"auth":page;
-  const headerAuth={authenticated:Boolean(session),displayName,onLogout:logout};
-  return <div dir="rtl">{visiblePage==="home"?<Home go={go} {...headerAuth}/>:visiblePage==="about"?<About go={go} {...headerAuth}/>:visiblePage==="auth"?<Auth go={go} onAuthenticated={authenticated}/>:visiblePage==="dashboard"?<Dashboard go={go} displayName={displayName} onLogout={logout} session={session!} onOpenLesson={openLesson} activePlan={activePlan}/>:visiblePage==="library"?<Library go={go} onOpenLesson={openLesson} session={session!} {...headerAuth}/>:visiblePage==="profile"?<Profile go={go} session={session!} profile={profile} activePlan={activePlan} onUpdateUsername={updateUsername} onDeleteAccount={removeAccount} {...headerAuth}/>:visiblePage==="lesson"?<Lesson go={go} lesson={activeLesson} session={session!} onOpenCoach={openCoach} {...headerAuth}/>:visiblePage==="coach"?<Coach go={go} session={session!} initialScenario={activeCoachScenario} activePlan={activePlan} {...headerAuth}/>:visiblePage==="pricing"?<Pricing go={go} choose={setPlan} activePlan={activePlan} {...headerAuth}/>:<Checkout go={go} plan={plan} session={session!} onActivated={activatePlan} {...headerAuth}/>}<SupportWidget showButton={visiblePage==="home"||visiblePage==="dashboard"}/></div>;
+  const headerAuth={authenticated:Boolean(session),displayName,onLogout:logout,isAdmin:profile?.role==="admin"};
+  return <div dir="rtl">{visiblePage==="home"?<Home go={go} {...headerAuth}/>:visiblePage==="about"?<About go={go} {...headerAuth}/>:visiblePage==="auth"?<Auth go={go} onAuthenticated={authenticated}/>:visiblePage==="dashboard"?<Dashboard go={go} displayName={displayName} onLogout={logout} session={session!} onOpenLesson={openLesson} activePlan={activePlan}/>:visiblePage==="library"?<Library go={go} onOpenLesson={openLesson} session={session!} {...headerAuth}/>:visiblePage==="profile"?<Profile go={go} session={session!} profile={profile} activePlan={activePlan} onUpdateUsername={updateUsername} onDeleteAccount={removeAccount} {...headerAuth}/>:visiblePage==="lesson"?<Lesson go={go} lesson={activeLesson} session={session!} onOpenCoach={openCoach} {...headerAuth}/>:visiblePage==="coach"?<Coach go={go} session={session!} initialScenario={activeCoachScenario} activePlan={activePlan} {...headerAuth}/>:visiblePage==="admin"&&profile?.role==="admin"?<Admin go={go} session={session!} {...headerAuth}/>:visiblePage==="pricing"?<Pricing go={go} choose={setPlan} activePlan={activePlan} {...headerAuth}/>:<Checkout go={go} plan={plan} session={session!} onActivated={activatePlan} {...headerAuth}/>}<SupportWidget showButton={visiblePage==="home"||visiblePage==="dashboard"}/></div>;
 }
