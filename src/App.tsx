@@ -217,7 +217,8 @@ function Auth({ go, onAuthenticated }: { go: (p: Page) => void; onAuthenticated:
     } catch (error) {
       const details=error instanceof Error ? error.message : "ارسال کد انجام نشد.";
       const normalized=details.toLowerCase();
-      setMessage(normalized.includes("rate limit") ? "درخواست‌های ایمیل بیش از حد مجاز شده است؛ لطفاً چند دقیقه صبر کن و دوباره تلاش کن." : normalized.includes("not found") || normalized.includes("does not exist") || normalized.includes("user") ? "با این ایمیل یا شماره حسابی پیدا نشد. ابتدا ثبت‌نام کن." : details);
+      const accountMissing=normalized.includes("not found") || normalized.includes("does not exist") || normalized.includes("signups not allowed") || normalized.includes("user not found");
+      setMessage(normalized.includes("rate limit") ? "درخواست‌های ایمیل بیش از حد مجاز شده است؛ لطفاً چند دقیقه صبر کن و دوباره تلاش کن." : accountMissing ? "با این ایمیل یا شماره حسابی پیدا نشد. ابتدا از بخش «ثبت‌نام» حساب بساز." : details);
     } finally { setBusy(false); }
   };
   const confirmOtp=async()=>{
