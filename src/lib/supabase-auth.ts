@@ -414,6 +414,39 @@ export type AdminLesson = {
   course_modules: { title: string; learning_paths: { title: string; position: number } };
 };
 
+export type AdminPlan = { id: string; slug: string; name: string; price_toman: number; ai_message_limit: number | null; is_active: boolean };
+
+export async function getAdminPlans(session: AuthSession) {
+  const { anonKey } = requireConfig();
+  const response = await fetch(endpoint("/rest/v1/plans?select=id,slug,name,price_toman,ai_message_limit,is_active&order=price_toman.asc"), {
+    headers: { apikey: anonKey, Authorization: `Bearer ${session.access_token}` },
+  });
+  if (!response.ok) throw new Error("دریافت پلن‌ها انجام نشد.");
+  return await response.json() as AdminPlan[];
+}
+
+export type AdminUserDetail = {
+  profile: { id: string; username: string | null; display_name: string | null; role: string; created_at: string; email: string | null; phone: string | null };
+  assessment: { recommended_dimensions?: string[]; created_at?: string };
+  entitlements: Array<{ plan: string; status: string; starts_at: string; ends_at: string | null }>;
+  orders: Array<{ plan: string; amount_toman: number; status: string; customer_name: string | null; created_at: string; paid_at: string | null }>;
+  lessons: Array<{ title: string; path: string; completed_at: string | null; exercise_completed_at: string | null }>;
+  challenges: Array<{ key: string; month_start: string; completed_at: string | null }>;
+  ai_usage: Array<{ date: string; message_count: number }>;
+  conversations: Array<{ title: string; scenario_key: string; created_at: string; updated_at: string; messages: Array<{ role: string; content: string; feedback: CoachFeedback | null; created_at: string }> }>;
+};
+
+export async function getAdminUserDetail(session: AuthSession, userId: string) {
+  const { anonKey } = requireConfig();
+  const response = await fetch(endpoint("/rest/v1/rpc/admin_user_detail"), {
+    method: "POST",
+    headers: { apikey: anonKey, Authorization: `Bearer ${session.access_token}`, "Content-Type": "application/json" },
+    body: JSON.stringify({ target_user_id: userId }),
+  });
+  if (!response.ok) throw new Error("دریافت جزئیات کاربر انجام نشد.");
+  return await response.json() as AdminUserDetail;
+}
+
 export async function getAdminLessons(session: AuthSession) {
   const { anonKey } = requireConfig();
   const response = await fetch(endpoint("/rest/v1/lessons?select=id,slug,title,summary,position,is_published,duration_minutes,course_modules!inner(title,learning_paths!inner(title,position))"), {
