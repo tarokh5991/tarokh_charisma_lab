@@ -411,6 +411,7 @@ export type AdminLesson = {
   position: number;
   is_published: boolean;
   duration_minutes: number;
+  body: PublishedLesson["body"];
   course_modules: { title: string; learning_paths: { title: string; position: number } };
 };
 
@@ -449,12 +450,22 @@ export async function getAdminUserDetail(session: AuthSession, userId: string) {
 
 export async function getAdminLessons(session: AuthSession) {
   const { anonKey } = requireConfig();
-  const response = await fetch(endpoint("/rest/v1/lessons?select=id,slug,title,summary,position,is_published,duration_minutes,course_modules!inner(title,learning_paths!inner(title,position))"), {
+  const response = await fetch(endpoint("/rest/v1/lessons?select=id,slug,title,summary,position,is_published,duration_minutes,body,course_modules!inner(title,learning_paths!inner(title,position))"), {
     headers: { apikey: anonKey, Authorization: `Bearer ${session.access_token}` },
   });
   if (!response.ok) throw new Error("دریافت فهرست درس‌ها انجام نشد.");
   const lessons = await response.json() as AdminLesson[];
   return lessons.sort((first, second) => first.course_modules.learning_paths.position - second.course_modules.learning_paths.position || first.position - second.position);
+}
+
+export async function updateAdminLesson(session: AuthSession, lesson: AdminLesson) {
+  const { anonKey } = requireConfig();
+  const response = await fetch(endpoint("/rest/v1/rpc/admin_update_lesson"), {
+    method: "POST",
+    headers: { apikey: anonKey, Authorization: `Bearer ${session.access_token}`, "Content-Type": "application/json" },
+    body: JSON.stringify({ target_lesson_id: lesson.id, next_title: lesson.title, next_summary: lesson.summary, next_duration_minutes: lesson.duration_minutes, next_body: lesson.body }),
+  });
+  if (!response.ok) throw new Error("ذخیرهٔ درس انجام نشد.");
 }
 
 export async function setLessonPublished(session: AuthSession, lessonId: string, published: boolean) {
