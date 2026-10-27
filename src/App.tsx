@@ -39,6 +39,13 @@ const Icon = ({ name }: { name: string }) => {
     edit: <><path d="M12 20h9" /><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4Z" /></>,
     close: <><path d="m6 6 12 12" /><path d="m18 6-12 12" /></>,
     reset: <><path d="M20 11a8 8 0 1 0 2 5" /><path d="M20 4v7h-7" /></>,
+    tag: <><path d="M20.6 13.4 11 3.8H4v7l9.6 9.6a2 2 0 0 0 2.8 0l4.2-4.2a2 2 0 0 0 0-2.8Z" /><circle cx="8" cy="8" r="1.2" /></>,
+    info: <><circle cx="12" cy="12" r="9" /><path d="M12 16v-5M12 8h.01" /></>,
+    help: <><circle cx="12" cy="12" r="9" /><path d="M9.5 9a2.5 2.5 0 1 1 3.7 2.2c-.8.5-1.2 1-1.2 1.8M12 17h.01" /></>,
+    logout: <><path d="M15 4h3a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2h-3" /><path d="m10 8-4 4 4 4M6 12h9" /></>,
+    login: <><path d="M9 4H6a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h3" /><path d="m14 8 4 4-4 4M18 12H9" /></>,
+    menu: <><path d="M4 6h16M4 12h16M4 18h16" /></>,
+    closeMenu: <><path d="m6 6 12 12" /><path d="m18 6-12 12" /></>,
   };
   return <svg viewBox="0 0 24 24" aria-hidden="true">{paths[name]}</svg>;
 };
@@ -56,8 +63,8 @@ const Header = ({ go, simple = false, authenticated = false, displayName, onLogo
   return <header className="header">
     <button className="brand" onClick={() => navigate("home")}><span>TAROKH</span><small>CHARISMA LAB</small></button>
     {!simple && <nav><button onClick={() => navigate("home")}>خانه</button><button onClick={() => navigate("dashboard")}>آکادمی</button><button onClick={() => navigate("coach")}>مربی AI</button><button onClick={() => navigate("pricing")}>پلن‌ها</button><button onClick={() => navigate("about")}>درباره ما</button><button onClick={openSupport}>پشتیبانی</button></nav>}
-    {!simple && <button className="menu-toggle" aria-label="باز کردن منو" aria-expanded={menuOpen} onClick={()=>setMenuOpen(!menuOpen)}><span/><span/><span/></button>}
-    {!simple&&menuOpen&&<div className="mobile-menu"><button onClick={()=>navigate("home")}>خانه</button><button onClick={()=>navigate("dashboard")}>آکادمی</button><button onClick={()=>navigate("coach")}>مربی AI</button><button onClick={()=>navigate("pricing")}>پلن‌ها</button><button onClick={()=>navigate("about")}>درباره ما</button><button onClick={openSupport}>پشتیبانی</button>{authenticated?<><button onClick={()=>navigate("profile")}>حساب من{displayName?` · ${displayName}`:""}</button>{onLogout&&<button onClick={()=>{setMenuOpen(false);onLogout()}}>خروج</button>}</>:<button onClick={()=>navigate("auth")}>ورود / ثبت‌نام</button>}</div>}
+    {!simple && <button className="menu-toggle" aria-label={menuOpen?"بستن منو":"باز کردن منو"} aria-expanded={menuOpen} onClick={()=>setMenuOpen(!menuOpen)}><Icon name={menuOpen?"closeMenu":"menu"}/></button>}
+    {!simple&&menuOpen&&<div className="mobile-menu"><button onClick={()=>navigate("home")}><Icon name="home"/><span>خانه</span></button><button onClick={()=>navigate("dashboard")}><Icon name="book"/><span>آکادمی</span></button><button onClick={()=>navigate("coach")}><Icon name="chat"/><span>مربی AI</span></button><button onClick={()=>navigate("pricing")}><Icon name="tag"/><span>پلن‌ها</span></button><button onClick={()=>navigate("about")}><Icon name="info"/><span>درباره ما</span></button><button onClick={openSupport}><Icon name="help"/><span>پشتیبانی</span></button>{authenticated?<><button onClick={()=>navigate("profile")}><Icon name="user"/><span>حساب من{displayName?` · ${displayName}`:""}</span></button>{onLogout&&<button onClick={()=>{setMenuOpen(false);onLogout()}}><Icon name="logout"/><span>خروج</span></button>}</>:<button onClick={()=>navigate("auth")}><Icon name="login"/><span>ورود / ثبت‌نام</span></button>}</div>}
     {authenticated ? <div className="account-actions"><button className="header-user" onClick={() => navigate("profile")}>{displayName || "حساب من"}</button><Button onClick={onLogout} ghost>خروج</Button></div> : <Button onClick={() => navigate("auth")} ghost>ورود / ثبت‌نام</Button>}
   </header>;
 };
