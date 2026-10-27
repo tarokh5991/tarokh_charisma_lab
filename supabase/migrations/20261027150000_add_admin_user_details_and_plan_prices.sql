@@ -74,7 +74,7 @@ begin
       from public.lesson_progress
       join public.lessons on lessons.id = lesson_progress.lesson_id
       join public.course_modules on course_modules.id = lessons.module_id
-      join public.learning_paths on learning_paths.id = course_modules.learning_path_id
+      join public.learning_paths on learning_paths.id = course_modules.path_id
       where lesson_progress.user_id = target_user_id
     ), '[]'::jsonb),
     'challenges', coalesce((
