@@ -207,16 +207,17 @@ function Auth({ go, onAuthenticated }: { go: (p: Page) => void; onAuthenticated:
     R:["ایجاد ارتباط","شروع و ادامه‌دادن ارتباط برایت طبیعی‌تر می‌شود."],
   };
   const submitOtp=async(signup=false)=>{
-    if(!identifier.trim() || !username.trim() || cooldown>0) return;
+    if(!identifier.trim() || (signup&&!username.trim()) || cooldown>0) return;
     setBusy(true); setMessage("");
     try {
-      await requestOtp(identifier.trim(), accountTab, signup ? username : undefined);
+      await requestOtp(identifier.trim(), accountTab, signup ? username : undefined, signup);
       setIsSignup(signup);
       setCooldown(60);
       setView("verify");
     } catch (error) {
       const details=error instanceof Error ? error.message : "ارسال کد انجام نشد.";
-      setMessage(details.toLowerCase().includes("rate limit") ? "درخواست‌های ایمیل بیش از حد مجاز شده است؛ لطفاً چند دقیقه صبر کن و دوباره تلاش کن." : details);
+      const normalized=details.toLowerCase();
+      setMessage(normalized.includes("rate limit") ? "درخواست‌های ایمیل بیش از حد مجاز شده است؛ لطفاً چند دقیقه صبر کن و دوباره تلاش کن." : normalized.includes("not found") || normalized.includes("does not exist") || normalized.includes("user") ? "با این ایمیل یا شماره حسابی پیدا نشد. ابتدا ثبت‌نام کن." : details);
     } finally { setBusy(false); }
   };
   const confirmOtp=async()=>{
@@ -225,15 +226,17 @@ function Auth({ go, onAuthenticated }: { go: (p: Page) => void; onAuthenticated:
     try {
       const session=await verifyOtp(identifier.trim(), otp.trim(), accountTab);
       const savedUsername=session.user.user_metadata?.username || session.user.user_metadata?.display_name;
-      if(savedUsername && savedUsername.trim().toLowerCase()!==username.trim().toLowerCase()) throw new Error("نام کاربری با این حساب مطابقت ندارد.");
-      const nextSession={...session,user:{...session.user,user_metadata:{...session.user.user_metadata,username:username.trim(),display_name:username.trim()}}};
+      const profileUsername=isSignup ? username.trim() : savedUsername?.trim() || "";
+      const nextSession={...session,user:{...session.user,user_metadata:{...session.user.user_metadata,username:profileUsername||undefined,display_name:profileUsername||undefined}}};
       saveSession(nextSession);
       onAuthenticated(nextSession);
       go("home");
       void (async()=>{
         try {
-          await updateUserProfile(session, username);
-          if(isSignup) await saveAssessment(session, answers, recommendation());
+          if(isSignup) {
+            await updateUserProfile(session, username);
+            await saveAssessment(session, answers, recommendation());
+          }
         } catch {
           // Authentication is complete even if optional profile data cannot be stored yet.
         }
@@ -247,9 +250,9 @@ function Auth({ go, onAuthenticated }: { go: (p: Page) => void; onAuthenticated:
     <span className="eyebrow">{login?"ورود امن با کد یک‌بارمصرف":"آخرین قدم"}</span>
     <h2>{login?"ورود به حساب":"ساخت حساب"}</h2>
     <div className="auth-tabs"><button className={accountTab==="mobile"?"active":""} onClick={()=>setAccountTab("mobile")}>شماره موبایل</button><button className={accountTab==="email"?"active":""} onClick={()=>setAccountTab("email")}>ایمیل</button></div>
-    <label>نام کاربری<input value={username} onChange={event=>setUsername(event.target.value)} dir="ltr" autoComplete="username" placeholder="مثلاً arman"/></label>
+    {!login&&<label>نام کاربری<input value={username} onChange={event=>setUsername(event.target.value)} dir="ltr" autoComplete="username" placeholder="مثلاً arman"/></label>}
     {accountTab==="mobile"?<label>شماره موبایل<input value={identifier} onChange={event=>setIdentifier(event.target.value)} dir="ltr" inputMode="tel" autoComplete="tel" placeholder="0912 000 0000"/> </label>:<label>ایمیل<input value={identifier} onChange={event=>setIdentifier(event.target.value)} dir="ltr" type="email" autoComplete="email" placeholder="name@example.com"/></label>}
-    <Button block onClick={()=>submitOtp(!login)} disabled={busy||cooldown>0||!identifier.trim()||!username.trim()}>{busy?"در حال ارسال…":cooldown>0?`ارسال دوباره تا ${cooldown} ثانیه`:login?"دریافت کد ورود":"دریافت کد"} <Icon name="arrow"/></Button>
+    <Button block onClick={()=>submitOtp(!login)} disabled={busy||cooldown>0||!identifier.trim()||(login?false:!username.trim())}>{busy?"در حال ارسال…":cooldown>0?`ارسال دوباره تا ${cooldown} ثانیه`:login?"دریافت کد ورود":"دریافت کد"} <Icon name="arrow"/></Button>
     {message&&<p className="auth-message">{message}</p>}
     {!login&&<small>پاسخ‌های تو فقط برای شخصی‌سازی مسیرت استفاده می‌شود.</small>}
   </>;

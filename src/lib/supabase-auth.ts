@@ -62,12 +62,12 @@ function normalizeIdentifier(value: string, mode: AuthMode) {
   return digits;
 }
 
-export function requestOtp(value: string, mode: AuthMode, username?: string) {
+export function requestOtp(value: string, mode: AuthMode, username?: string, createUser = true) {
   const identifier = normalizeIdentifier(value, mode);
   const data = username?.trim() ? { username: username.trim(), display_name: username.trim() } : undefined;
   return request("/auth/v1/otp", mode === "mobile"
-    ? { phone: identifier, create_user: true, ...(data ? { data } : {}) }
-    : { email: identifier, create_user: true, ...(data ? { data } : {}) });
+    ? { phone: identifier, create_user: createUser, ...(data ? { data } : {}) }
+    : { email: identifier, create_user: createUser, ...(data ? { data } : {}) });
 }
 
 export function verifyOtp(value: string, token: string, mode: AuthMode) {
