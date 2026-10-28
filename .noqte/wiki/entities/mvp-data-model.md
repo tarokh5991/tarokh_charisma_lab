@@ -77,3 +77,4 @@
 - `src/index.css:19` — استایل فیلترها، خروجی، نمودارها، ویرایشگر و کنترل‌های بن مدیریت.
 - `supabase/migrations/20261028100000_add_admin_user_bans.sql:1-223` — وضعیت بن پروفایل، RPC امن بن/رفع بن و افزودن وضعیت به گزارش و جزئیات مدیریت.
 - `supabase/migrations/20261028110000_add_client_error_monitoring.sql:1-67` — ثبت rate-limited خطاهای سمت کاربر و گزارش امن خطاهای اخیر برای مدیر.
+- `supabase/migrations/20261028120000_add_beta_feedback.sql:1-43` — ثبت بازخورد امتیازی و متنی کاربران بتا و گزارش امن آن برای مدیر.
