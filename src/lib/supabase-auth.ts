@@ -14,6 +14,8 @@ export type UserProfile = {
   role: "learner" | "mentor" | "admin";
   username?: string | null;
   display_name?: string | null;
+  is_banned: boolean;
+  banned_until: string | null;
 };
 
 function requireConfig() {
@@ -80,7 +82,7 @@ export function verifyOtp(value: string, token: string, mode: AuthMode) {
 
 export async function getUserProfile(session: AuthSession) {
   const { anonKey } = requireConfig();
-  const response = await fetch(endpoint(`/rest/v1/profiles?id=eq.${encodeURIComponent(session.user.id)}&select=id,role,username,display_name`), {
+  const response = await fetch(endpoint(`/rest/v1/profiles?id=eq.${encodeURIComponent(session.user.id)}&select=id,role,username,display_name,is_banned,banned_until`), {
     headers: {
       apikey: anonKey,
       Authorization: `Bearer ${session.access_token}`,
@@ -389,7 +391,7 @@ export type AdminOverview = {
   plans: Array<{ name: string; count: number }>;
   usage: Array<{ date: string; count: number }>;
   orders: Array<{ id: string; customer_name: string | null; username: string | null; plan: string; amount_toman: number; status: string; created_at: string }>;
-  users: Array<{ id: string; username: string | null; display_name: string | null; role: string; created_at: string; plan: string | null; plan_ends_at: string | null; completed_lessons: number; ai_messages: number }>;
+  users: Array<{ id: string; username: string | null; display_name: string | null; role: string; created_at: string; plan: string | null; plan_ends_at: string | null; completed_lessons: number; ai_messages: number; is_banned: boolean; banned_until: string | null }>;
 };
 
 export async function getAdminOverview(session: AuthSession) {
@@ -427,7 +429,7 @@ export async function getAdminPlans(session: AuthSession) {
 }
 
 export type AdminUserDetail = {
-  profile: { id: string; username: string | null; display_name: string | null; role: string; created_at: string; email: string | null; phone: string | null };
+  profile: { id: string; username: string | null; display_name: string | null; role: string; created_at: string; email: string | null; phone: string | null; is_banned: boolean; banned_until: string | null };
   assessment: { recommended_dimensions?: string[]; created_at?: string };
   entitlements: Array<{ plan: string; status: string; starts_at: string; ends_at: string | null }>;
   orders: Array<{ plan: string; amount_toman: number; status: string; customer_name: string | null; created_at: string; paid_at: string | null }>;
@@ -446,6 +448,18 @@ export async function getAdminUserDetail(session: AuthSession, userId: string) {
   });
   if (!response.ok) throw new Error("دریافت جزئیات کاربر انجام نشد.");
   return await response.json() as AdminUserDetail;
+}
+
+export type AdminBanPeriod = "three_days" | "seven_days" | "fourteen_days" | "permanent" | "remove";
+
+export async function setAdminUserBan(session: AuthSession, userId: string, banPeriod: AdminBanPeriod) {
+  const { anonKey } = requireConfig();
+  const response = await fetch(endpoint("/rest/v1/rpc/admin_set_user_ban"), {
+    method: "POST",
+    headers: { apikey: anonKey, Authorization: `Bearer ${session.access_token}`, "Content-Type": "application/json" },
+    body: JSON.stringify({ target_user_id: userId, ban_period: banPeriod }),
+  });
+  if (!response.ok) throw new Error("تغییر وضعیت بن حساب انجام نشد.");
 }
 
 export async function getAdminLessons(session: AuthSession) {
