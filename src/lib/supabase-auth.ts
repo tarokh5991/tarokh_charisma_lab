@@ -733,6 +733,38 @@ export async function getAdminRecentClientErrors(session: AuthSession) {
   return (await response.json()) as AdminErrorEvent[]
 }
 
+export type AdminBetaFeedback = {
+  username: string | null
+  rating: number
+  message: string
+  created_at: string
+}
+
+export async function submitBetaFeedback(
+  session: AuthSession,
+  rating: number,
+  message: string,
+) {
+  const { anonKey } = requireConfig()
+  const response = await fetch(endpoint("/rest/v1/beta_feedback"), {
+    method: "POST",
+    headers: { apikey: anonKey, Authorization: `Bearer ${session.access_token}`, "Content-Type": "application/json" },
+    body: JSON.stringify({ user_id: session.user.id, rating, message: message.trim() }),
+  })
+  if (!response.ok) throw new Error("ثبت بازخورد انجام نشد.")
+}
+
+export async function getAdminRecentBetaFeedback(session: AuthSession) {
+  const { anonKey } = requireConfig()
+  const response = await fetch(endpoint("/rest/v1/rpc/admin_recent_beta_feedback"), {
+    method: "POST",
+    headers: { apikey: anonKey, Authorization: `Bearer ${session.access_token}`, "Content-Type": "application/json" },
+    body: "{}",
+  })
+  if (!response.ok) throw new Error("دریافت بازخوردهای بتا انجام نشد.")
+  return (await response.json()) as AdminBetaFeedback[]
+}
+
 export type AdminLesson = {
   id: string
   slug: string

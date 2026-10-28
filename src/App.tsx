@@ -11,6 +11,7 @@ import {
   getAdminLessons,
   getAdminOverview,
   getAdminPlans,
+  getAdminRecentBetaFeedback,
   getAdminRecentClientErrors,
   getAdminUserDetail,
   getCoachConversation,
@@ -33,10 +34,12 @@ import {
   setAdminUserBan,
   setLessonPublished,
   signOut,
+  submitBetaFeedback,
   updateAdminLesson,
   updateUserProfile,
   verifyOtp,
   type AdminBanPeriod,
+  type AdminBetaFeedback,
   type AdminErrorEvent,
   type AdminLesson,
   type AdminOverview,
@@ -1790,6 +1793,10 @@ function Profile({
   const [saving, setSaving] = useState(false)
   const [message, setMessage] = useState("")
   const [purchases, setPurchases] = useState<PurchaseRecord[]>([])
+  const [feedbackRating, setFeedbackRating] = useState(5)
+  const [feedbackMessage, setFeedbackMessage] = useState("")
+  const [sendingFeedback, setSendingFeedback] = useState(false)
+  const [feedbackStatus, setFeedbackStatus] = useState("")
   useEffect(() => {
     getPurchaseHistory(session)
       .then(setPurchases)
@@ -1809,6 +1816,20 @@ function Profile({
       )
     } finally {
       setSaving(false)
+    }
+  }
+  const sendFeedback = async () => {
+    if (!feedbackMessage.trim()) return
+    setSendingFeedback(true)
+    setFeedbackStatus("")
+    try {
+      await submitBetaFeedback(session, feedbackRating, feedbackMessage)
+      setFeedbackMessage("")
+      setFeedbackStatus("بازخوردت ثبت شد. ممنون که به بهبود نسخهٔ بتا کمک می‌کنی.")
+    } catch (error) {
+      setFeedbackStatus(error instanceof Error ? error.message : "ثبت بازخورد انجام نشد.")
+    } finally {
+      setSendingFeedback(false)
     }
   }
   return (
@@ -1906,6 +1927,18 @@ function Profile({
               <strong className="profile-status">فعال</strong>
             </div>
           </div>
+        </section>
+        <section className="purchase-history beta-feedback-form">
+          <div className="section-head"><h3>بازخورد نسخهٔ بتا</h3></div>
+          <p>تجربه‌ات از مسیر یادگیری را کوتاه و شفاف بنویس.</p>
+          <div className="beta-feedback-controls">
+            <select value={feedbackRating} onChange={(event) => setFeedbackRating(Number(event.target.value))}>
+              {[5, 4, 3, 2, 1].map((rating) => <option value={rating} key={rating}>{rating} از ۵</option>)}
+            </select>
+            <textarea value={feedbackMessage} onChange={(event) => setFeedbackMessage(event.target.value)} maxLength={1000} placeholder="چه چیزی خوب بود یا کجا به مشکل خوردی؟" />
+            <Button onClick={sendFeedback} disabled={sendingFeedback || !feedbackMessage.trim()}>{sendingFeedback ? "در حال ثبت…" : "ارسال بازخورد"}</Button>
+          </div>
+          {feedbackStatus && <p className="profile-message">{feedbackStatus}</p>}
         </section>
         <section className="purchase-history">
           <div className="section-head">
