@@ -23,7 +23,7 @@ export type UserProfile = {
   banned_until: string | null
 }
 
-function requireConfig() {
+function requireConfig(): { url: string; anonKey: string } {
   if (
     !supabaseConfig.isConfigured ||
     !supabaseConfig.url ||
@@ -31,7 +31,7 @@ function requireConfig() {
   ) {
     throw new Error("اتصال به سرویس احراز هویت هنوز تنظیم نشده است.")
   }
-  return supabaseConfig
+  return { url: supabaseConfig.url, anonKey: supabaseConfig.anonKey }
 }
 
 function endpoint(path: string) {

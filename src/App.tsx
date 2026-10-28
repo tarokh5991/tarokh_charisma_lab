@@ -2616,7 +2616,7 @@ function Admin({
     const csv = [headers, ...rows]
       .map((row) =>
         row
-          .map((value) => `"${String(value ?? "").replaceAll('"', '""')}"`)
+          .map((value) => `"${String(value ?? "").replace(/"/g, '""')}"`)
           .join(","),
       )
       .join("\n")
