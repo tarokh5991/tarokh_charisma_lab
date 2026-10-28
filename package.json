@@ -8,7 +8,7 @@
     "build": "vite build",
     "preview": "vite preview",
     "format": "oxfmt",
-    "format:check": "oxfmt --check",
+    "format:check": "oxfmt --check quality-contracts.test.mjs src/config/supabase.ts src/main.tsx src/vite-env.d.ts supabase/functions/coach/index.ts vite.config.ts",
     "typecheck": "tsc --noEmit",
     "test": "node --test quality-contracts.test.mjs"
   },
