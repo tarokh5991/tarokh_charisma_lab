@@ -3,6 +3,7 @@ import {
   activateDemoPlan,
   completeExercise,
   completeLesson,
+  completePathChallenge,
   completeMonthlyChallenge,
   createCoachConversation,
   deleteAccount,
@@ -19,6 +20,7 @@ import {
   getCoachQuota,
   getLatestAssessment,
   getLessonProgress,
+  getPathChallengeProgress,
   getMonthlyChallengeProgress,
   getPublishedLessons,
   getPurchaseHistory,
@@ -1222,6 +1224,13 @@ function Dashboard({
     useState(false)
   const [monthlyChallengeSaving, setMonthlyChallengeSaving] = useState(false)
   const [monthlyChallengeMessage, setMonthlyChallengeMessage] = useState("")
+  const [pathChallengeProgress, setPathChallengeProgress] = useState<
+    Record<string, boolean>
+  >({})
+  const [pathChallengeSaving, setPathChallengeSaving] = useState<string | null>(
+    null,
+  )
+  const [pathChallengeMessage, setPathChallengeMessage] = useState("")
   const challenges: Record<string, {
     title: string
     description: string
@@ -1282,6 +1291,57 @@ function Dashboard({
       ],
       success: "واکنش طرف مقابل و چیزی را که دربارهٔ او فهمیدی ثبت کن.",
     },
+  }
+  const pathChallenges: Record<string, Array<{
+    key: string
+    title: string
+    duration: string
+    level: string
+    description: string
+    success: string
+    simpler: string
+    reflection: string
+  }>> = {
+    "confidence-listening": [
+      { key: "cl-1", title: "صبرِ یک‌ثانیه‌ای", duration: "۳ روز", level: "آسان", description: "هر روز در یک مکالمه، بعد از تمام‌شدن حرف طرف مقابل یک ثانیه صبر کن، بعد جوابت را فقط از چیزی که شنیدی بساز.", success: "سه مکالمه‌ی ثبت‌شده با این الگو.", simpler: "با یکی از اعضای خانواده یا با مربی هوش مصنوعی تمرین کن.", reflection: "آن یک ثانیه چه تفاوتی در جوابت ایجاد کرد؟" },
+      { key: "cl-2", title: "سؤال با صدای آرام", duration: "۵ روز", level: "متوسط", description: "هر روز فقط یک سؤال بپرس که از جمله‌ی آخر طرف مقابل ساخته شده باشد. آرام بپرس و صدایت را در آخر سؤال پایین بیاور.", success: "پنج سؤال ثبت‌شده، هرکدام با جمله‌ای که سؤال از آن آمده است.", simpler: "سؤال را اول در یک پیام متنی تمرین کن.", reflection: "کدام سؤال بیشتر او را به حرف‌زدن کشاند؟" },
+    ],
+    "confidence-expression": [
+      { key: "ce-1", title: "جواب کوتاه، صدای آرام", duration: "۳ روز", level: "آسان", description: "هر روز در یک گفتگوی مهم، با یک مکث کوتاه شروع کن و جوابت را در یک یا دو جمله بده.", success: "سه بار انجام‌شده، با ثبت اینکه چه پرسیدند و چه گفتی.", simpler: "جوابت را روی ضبط صدای گوشی بگو و گوش بده.", reflection: "کوتاه‌شدن جواب چه حسی به تو داد؟" },
+      { key: "ce-2", title: "پیام صوتی قاطع", duration: "۲ روز", level: "متوسط", description: "یک پیام صوتی ۳۰ ثانیه‌ای درباره‌ی تصمیمی که گرفته‌ای ضبط کن: اول نتیجه، بعد یک دلیل. گوش بده، کلمه‌های پرکننده («یعنی»، «شاید») را حذف کن و دوباره ضبط کن.", success: "دو ضبط از یک موضوع و مقایسه‌ی آن‌ها.", simpler: "پیام را فقط برای خودت نگه دار.", reflection: "در ضبط دوم، کدام بخش قاطع‌تر بود؟" },
+    ],
+    "confidence-awareness": [
+      { key: "ca-1", title: "ده ثانیه نگاه", duration: "۳ روز", level: "آسان", description: "هر جا وارد شدی (کافه، جلسه، دورهمی)، ده ثانیه قبل از حرف‌زدن فقط نگاه کن: فضا چطور است و حال بقیه چیست؟ در همان ده ثانیه صاف و آرام بایست.", success: "سه بار انجام‌شده، با یک جمله یادداشت از آنچه دیدی.", simpler: "فقط در یک محیط آشنا انجام بده.", reflection: "دیدن اول چه تفاوتی در شروع حرف‌زدنت ایجاد کرد؟" },
+      { key: "ca-2", title: "نفس قبل از واکنش", duration: "۵ روز", level: "متوسط", description: "هر بار نشانه‌ی ازدست‌رفتن حواس را در طرف مقابل دیدی (نگاه، جواب کوتاه، چرخش بدن)، قبل از هر واکنش یک نفس آرام بکش. بعد تصمیم بگیر موضوع را عوض کنی یا بپرسی.", success: "حداقل دو بار که نشانه را دیدی و با یک نفس آرام واکنش دادی.", simpler: "در سناریوی «شنونده‌ی بی‌حوصله» با مربی هوش مصنوعی تمرین کن.", reflection: "وقتی نشانه را دیدی، بدنت چه حسی داشت؟" },
+    ],
+    "confidence-rapport": [
+      { key: "cr-1", title: "فقط «ممنون»", duration: "۳ روز", level: "آسان", description: "هر بار کسی از تو تعریف کرد، فقط بگو «ممنون» و صبر کن. نه رد کن، نه توضیح بده.", success: "ثبت سه تعریف و واکنش خودت به هرکدام.", simpler: "اگر تعریفی نشد، همین تمرین را با پیام‌های قدردانی انجام بده.", reflection: "گرفتن تعریف برایت سخت‌تر بود یا راحت‌تر؟" },
+      { key: "cr-2", title: "سلام با یک جمله", duration: "۵ روز", level: "متوسط", description: "هر روز به کسی که کم می‌شناسی (همکار، همسایه، فروشنده) با نگاه آرام سلام کن و یک جمله‌ی کوتاه اضافه کن: «این هفته شلوغ بود؟»", success: "پنج سلام ثبت‌شده. مهم نیست جواب طولانی باشد.", simpler: "فقط سلام و لبخند، بدون جمله‌ی اضافه.", reflection: "کدام واکنش تو را بیشتر غافلگیر کرد؟" },
+    ],
+    "listening-expression": [
+      { key: "le-1", title: "بازگو، بعد جواب", duration: "۵ روز", level: "متوسط", description: "در هر گفتگوی کاری، اول یک جمله از حرف طرف مقابل را بازگو کن، بعد جوابت را با نتیجه شروع کن: «پس نگران زمان‌بندی هستی. نتیجه این است که...»", success: "پنج بار انجام‌شده.", simpler: "در پیام‌های متنی تمرین کن.", reflection: "بازگو کردن چه چیزی در جواب‌هایت تغییر داد؟" },
+      { key: "le-2", title: "سی ثانیه، بعد بپرس", duration: "۳ روز", level: "آسان", description: "هر روز یک بار، جواب یک سؤال را در حدود سی ثانیه بده و بعد بپرس: «می‌خوای بیشتر توضیح بدم؟»", success: "سه بار انجام‌شده.", simpler: "جوابت را اول روی ضبط صدا بگو.", reflection: "چند بار طرف مقابل خودش خواست بیشتر بدانی؟" },
+    ],
+    "listening-awareness": [
+      { key: "la-1", title: "دفتر نشانه‌ها", duration: "۷ روز", level: "آسان", description: "هر شب یک مکالمه‌ی آن روز را یادداشت کن: چه گفتند و چه نشانه‌ای از حالشان دیدی (نگاه، لحن، بدن). فقط ثبت کن، بدون قضاوت.", success: "هفت یادداشت کوتاه.", simpler: "هفته‌ای چهار شب.", reflection: "کدام نشانه بیشتر از همه تکرار شد؟" },
+      { key: "la-2", title: "چک‌این محترمانه", duration: "۳ روز", level: "چالشی", description: "وقتی دو نشانه‌ی ازدست‌رفتن حواس را با هم دیدی، یک بار بپرس: «می‌خوای این موضوع رو بذاریم برای بعد؟» نتیجه را ثبت کن.", success: "یک بار انجام‌شده، با یادداشت از واکنش او.", simpler: "در سناریوی «شنونده‌ی بی‌حوصله» با مربی هوش مصنوعی تمرین کن.", reflection: "طرف مقابل چه واکنشی نشان داد؟" },
+    ],
+    "listening-rapport": [
+      { key: "lr-1", title: "برگشت به حرف قبلی", duration: "۷ روز", level: "متوسط", description: "برای دو نفر مختلف، به چیزی که قبلاً گفته بودند برگرد: «اون سفری که گفتی چی شد؟»", success: "دو بار انجام‌شده، با ثبت واکنش هر نفر.", simpler: "با یک دوست نزدیک شروع کن.", reflection: "وقتی یادآوری کردی، حال و هوای مکالمه چطور شد؟" },
+      { key: "lr-2", title: "قبل از راه‌حل", duration: "۵ روز", level: "متوسط", description: "وقتی کسی از مشکلی حرف زد، اول حرفش را بازگو کن و بپرس: «می‌خوای نظرم رو بگم، یا فقط می‌خوای حرف بزنی؟»", success: "دو بار انجام‌شده.", simpler: "در سناریوی مربی هوش مصنوعی تمرین کن.", reflection: "اگر گفت «فقط می‌خوام حرف بزنم»، نصیحت‌نکردن برایت چقدر سخت بود؟" },
+    ],
+    "expression-awareness": [
+      { key: "ea-1", title: "اندازه‌ی شنونده", duration: "۵ روز", level: "متوسط", description: "وقتی حرف می‌زنی، به نشانه‌های شنونده نگاه کن. اگر دو نشانه‌ی ازدست‌رفتن حواس دیدی، حرفت را جمع کن و بپرس.", success: "سه بار انجام‌شده.", simpler: "فقط یک نشانه را دنبال کن، مثلاً نگاه.", reflection: "جمع‌کردن حرف چه تأثیری در واکنش او داشت؟" },
+      { key: "ea-2", title: "پایان در اوج", duration: "۳ روز", level: "چالشی", description: "یک مکالمه را قبل از افت انرژی تمام کن: یک جمله‌ی قدردانی، یک جمله‌ی خروج، بعد برو.", success: "یک بار انجام‌شده.", simpler: "همین را در یک پیام متنی تمرین کن.", reflection: "پایان‌دادن در اوج چه حسی از مکالمه برای هر دو شما گذاشت؟" },
+    ],
+    "expression-rapport": [
+      { key: "er-1", title: "تشکر مشخص", duration: "۳ روز", level: "آسان", description: "هر روز از یک نفر مشخصاً تشکر کن: چه کرد و چه تأثیری داشت. کوتاه و بی‌اغراق: «ممنون که فایل را فرستادی؛ جلسه راحت‌تر شد.»", success: "سه تشکر ثبت‌شده.", simpler: "در پیام متنی بنویس.", reflection: "تشکر مشخص با «مرسی» ساده چه فرقی داشت؟" },
+      { key: "er-2", title: "«نه»ی محترمانه", duration: "۵ روز", level: "چالشی", description: "وقتی نمی‌خواهی درخواستی را بپذیری، بگو: «ممنون که به من فکر کردی. این بار نمی‌تونم.» اگر خواستی، یک پیشنهاد جایگزین هم بده.", success: "یک بار انجام‌شده.", simpler: "در سناریوی «درخواست آخر هفته» با مربی هوش مصنوعی تمرین کن.", reflection: "جواب کوتاه و محترمانه رابطه را چطور تغییر داد؟" },
+    ],
+    "awareness-rapport": [
+      { key: "ar-1", title: "تعریف از چیزی که دیدی", duration: "۵ روز", level: "متوسط", description: "هر روز یک تعریف خاص و واقعی درباره‌ی چیزی که دیدی بگو، وقتی حال طرف مقابل مناسب است (مثلاً عجله ندارد).", success: "پنج تعریف ثبت‌شده، همراه با واکنش.", simpler: "فقط سه روز.", reflection: "تعریف دقیق چه فرقی با تعریف کلی داشت؟" },
+      { key: "ar-2", title: "به‌جای خبر، حال", duration: "۷ روز", level: "چالشی", description: "وقتی نشانه‌ی خستگی یا ناراحتی دیدی، به‌جای «چه خبر؟» بگو: «امروز خسته به‌نظر می‌رسی، همه‌چی خوبه؟» این یک حدس است، نه حکم. اگر نخواست حرف بزند، محترمانه کنار بیا.", success: "دو بار انجام‌شده.", simpler: "با نزدیک‌ترین دوستت شروع کن.", reflection: "وقتی او را کنار گذاشتی یا گوش دادی، چه حسی داشتی؟" },
+    ],
   }
   const dimensions: Record<string, [string, string]> = {
     confidence: ["اعتمادبه‌نفس", "حضور آرام و مرزهای روشن را در خودت تقویت کن."],
@@ -1365,6 +1425,15 @@ function Dashboard({
               ),
             )
             .catch(() => {})
+        getPathChallengeProgress(session)
+          .then((items) =>
+            setPathChallengeProgress(
+              Object.fromEntries(
+                items.map((item) => [item.challenge_key, Boolean(item.completed_at)]),
+              ),
+            ),
+          )
+          .catch(() => {})
       })
       .catch(() => {})
   }, [session])
@@ -1387,6 +1456,37 @@ function Dashboard({
   const monthlyChallengeAvailable = ["نقره", "طلا", "الماس"].includes(
     activePlan?.name || "",
   )
+  const clearDimensionOrder = [
+    "confidence",
+    "listening",
+    "expression",
+    "awareness",
+    "rapport",
+  ]
+  const pathChallengeKey = [...recommendedDimensions]
+    .filter((dimension) => clearDimensionOrder.includes(dimension))
+    .sort(
+      (first, second) =>
+        clearDimensionOrder.indexOf(first) - clearDimensionOrder.indexOf(second),
+    )
+    .slice(0, 2)
+    .join("-")
+  const assignedPathChallenges = pathChallenges[pathChallengeKey] || []
+  const completeAssignedPathChallenge = async (challengeKey: string) => {
+    if (pathChallengeSaving) return
+    setPathChallengeSaving(challengeKey)
+    setPathChallengeMessage("")
+    try {
+      await completePathChallenge(session, challengeKey)
+      setPathChallengeProgress((current) => ({ ...current, [challengeKey]: true }))
+    } catch (error) {
+      setPathChallengeMessage(
+        error instanceof Error ? error.message : "ثبت انجام چالش مسیر انجام نشد.",
+      )
+    } finally {
+      setPathChallengeSaving(null)
+    }
+  }
   const completeChallenge = async () => {
     if (!monthlyChallengeAvailable || monthlyChallengeSaving) return
     setMonthlyChallengeSaving(true)
@@ -1510,49 +1610,40 @@ function Dashboard({
             </div>
           </section>
         )}
-        <section
-          className={`monthly-challenge ${
-            monthlyChallengeAvailable ? "" : "locked"
-          }`}
-        >
-          <div>
-            <span className="eyebrow">چالش ماهانهٔ پیشنهادی</span>
-            <h3>{monthlyChallenge.title}</h3>
-            <p>{monthlyChallenge.description}</p>
-            <ol>
-              {monthlyChallenge.steps.map((step) => (
-                <li key={step}>{step}</li>
+        {assignedPathChallenges.length > 0 && (
+          <section className="monthly-challenge">
+            <div>
+              <span className="eyebrow">چالش‌های مسیر تو</span>
+              <h3>
+                دو تمرین برای {dimensions[recommendedDimensions[0]]?.[0]} و {dimensions[recommendedDimensions[1]]?.[0]}
+              </h3>
+              <p>
+                این چالش‌ها اختیاری‌اند. اگر موقعیتی ناامن یا خیلی سخت بود، همان‌جا متوقفش کن؛ تمرین با مربی هوش مصنوعی هم جایگزین تمرین با آدم واقعی است.
+              </p>
+              {assignedPathChallenges.map((challenge) => (
+                <article key={challenge.key} className="path-challenge">
+                  <span>{challenge.duration} · {challenge.level}</span>
+                  <h4>{challenge.title}</h4>
+                  <p>{challenge.description}</p>
+                  <small>معیار موفقیت: {challenge.success}</small>
+                  <small>نسخهٔ ساده‌تر: {challenge.simpler}</small>
+                  <small>سؤال بازتابی: {challenge.reflection}</small>
+                  {pathChallengeProgress[challenge.key] ? (
+                    <b>انجام شد</b>
+                  ) : (
+                    <Button
+                      onClick={() => completeAssignedPathChallenge(challenge.key)}
+                      disabled={pathChallengeSaving === challenge.key}
+                    >
+                      {pathChallengeSaving === challenge.key ? "در حال ثبت…" : "چالش را انجام دادم"}
+                    </Button>
+                  )}
+                </article>
               ))}
-            </ol>
-            <small>معیار انجام: {monthlyChallenge.success}</small>
-          </div>
-          {monthlyChallengeAvailable ? (
-            <div className="challenge-action">
-              {monthlyChallengeCompleted ? (
-                <span>چالش این ماه انجام شد.</span>
-              ) : (
-                <Button
-                  onClick={completeChallenge}
-                  disabled={monthlyChallengeSaving}
-                >
-                  {monthlyChallengeSaving
-                    ? "در حال ثبت…"
-                    : "چالش را انجام دادم"}
-                </Button>
-              )}
-              {monthlyChallengeMessage && (
-                <small>{monthlyChallengeMessage}</small>
-              )}
+              {pathChallengeMessage && <small>{pathChallengeMessage}</small>}
             </div>
-          ) : (
-            <div className="challenge-action">
-              <span>چالش ماهانه در پلن نقره و بالاتر فعال است.</span>
-              <Button ghost onClick={() => go("pricing")}>
-                مشاهدهٔ پلن‌ها <Icon name="arrow" />
-              </Button>
-            </div>
-          )}
-        </section>
+          </section>
+        )}
         <div className="section-head">
           <h3>ادامه مسیر</h3>
           <button onClick={() => go("library")}>مشاهده همه</button>

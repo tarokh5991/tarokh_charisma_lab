@@ -591,6 +591,48 @@ export type MonthlyChallengeProgress = {
   completed_at: string | null
 }
 
+export type PathChallengeProgress = {
+  challenge_key: string
+  completed_at: string | null
+}
+
+export async function getPathChallengeProgress(session: AuthSession) {
+  const { anonKey } = requireConfig()
+  const response = await fetch(
+    endpoint(
+      `/rest/v1/path_challenge_progress?user_id=eq.${encodeURIComponent(session.user.id)}&select=challenge_key,completed_at`,
+    ),
+    { headers: { apikey: anonKey, Authorization: `Bearer ${session.access_token}` } },
+  )
+  if (!response.ok) throw new Error("دریافت وضعیت چالش‌های مسیر انجام نشد.")
+  return (await response.json()) as PathChallengeProgress[]
+}
+
+export async function completePathChallenge(
+  session: AuthSession,
+  challengeKey: string,
+) {
+  const { anonKey } = requireConfig()
+  const response = await fetch(
+    endpoint("/rest/v1/path_challenge_progress?on_conflict=user_id,challenge_key"),
+    {
+      method: "POST",
+      headers: {
+        apikey: anonKey,
+        Authorization: `Bearer ${session.access_token}`,
+        "Content-Type": "application/json",
+        Prefer: "resolution=merge-duplicates",
+      },
+      body: JSON.stringify({
+        user_id: session.user.id,
+        challenge_key: challengeKey,
+        completed_at: new Date().toISOString(),
+      }),
+    },
+  )
+  if (!response.ok) throw new Error("ثبت انجام چالش مسیر انجام نشد.")
+}
+
 export async function getMonthlyChallengeProgress(
   session: AuthSession,
   monthStart: string,
