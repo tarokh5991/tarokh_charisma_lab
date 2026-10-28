@@ -11,6 +11,7 @@ import {
   getAdminLessons,
   getAdminOverview,
   getAdminPlans,
+  getAdminRecentClientErrors,
   getAdminUserDetail,
   getCoachConversation,
   getCoachMessages,
@@ -22,6 +23,7 @@ import {
   getPurchaseHistory,
   getStoredSession,
   getUserProfile,
+  logClientError,
   requestCoachReply,
   requestOtp,
   restoreSession,
@@ -35,6 +37,7 @@ import {
   updateUserProfile,
   verifyOtp,
   type AdminBanPeriod,
+  type AdminErrorEvent,
   type AdminLesson,
   type AdminOverview,
   type AdminPlan,
@@ -2536,6 +2539,7 @@ function Admin({
   const [overview, setOverview] = useState<AdminOverview | null>(null)
   const [lessons, setLessons] = useState<AdminLesson[]>([])
   const [plans, setPlans] = useState<AdminPlan[]>([])
+  const [errorEvents, setErrorEvents] = useState<AdminErrorEvent[]>([])
   const [selectedUser, setSelectedUser] = useState<AdminUserDetail | null>(null)
   const [loadingUser, setLoadingUser] = useState(false)
   const [banPeriod, setBanPeriod] = useState<AdminBanPeriod>("three_days")
@@ -2562,14 +2566,17 @@ function Admin({
     else setLoading(true)
     setMessage("")
     try {
-      const [nextOverview, nextLessons, nextPlans] = await Promise.all([
-        getAdminOverview(session),
-        getAdminLessons(session),
-        getAdminPlans(session),
-      ])
+      const [nextOverview, nextLessons, nextPlans, nextErrorEvents] =
+        await Promise.all([
+          getAdminOverview(session),
+          getAdminLessons(session),
+          getAdminPlans(session),
+          getAdminRecentClientErrors(session),
+        ])
       setOverview(nextOverview)
       setLessons(nextLessons)
       setPlans(nextPlans)
+      setErrorEvents(nextErrorEvents)
     } catch (error) {
       setMessage(
         error instanceof Error
@@ -2973,6 +2980,23 @@ function Admin({
                               <b>{formatNumber(count)}</b>
                             </div>
                           ))}
+                      </div>
+                    )}
+                  </section>
+                  <section className="admin-panel">
+                    <h3>خطاهای اخیر برنامه</h3>
+                    {errorEvents.length === 0 ? (
+                      <p>خطایی از کاربران واردشده ثبت نشده است.</p>
+                    ) : (
+                      <div className="admin-activity-list">
+                        {errorEvents.map((event) => (
+                          <div key={`${event.created_at}-${event.message}`}>
+                            <b>{event.username || "کاربر بدون نام"}</b>
+                            <span>
+                              {event.message} · {event.page} · {date(event.created_at)}
+                            </span>
+                          </div>
+                        ))}
                       </div>
                     )}
                   </section>
@@ -4256,6 +4280,30 @@ export default function App() {
     window.addEventListener("storage", syncSession)
     return () => window.removeEventListener("storage", syncSession)
   }, [])
+  useEffect(() => {
+    if (!session) return
+    const report = (reason: unknown) => {
+      const message =
+        reason instanceof Error
+          ? reason.message
+          : typeof reason === "string"
+            ? reason
+            : "خطای ناشناختهٔ برنامه"
+      if (!message.trim()) return
+      logClientError(session, {
+        page: window.location.hash || "home",
+        message: message.slice(0, 500),
+      }).catch(() => {})
+    }
+    const handleError = (event: ErrorEvent) => report(event.error || event.message)
+    const handleRejection = (event: PromiseRejectionEvent) => report(event.reason)
+    window.addEventListener("error", handleError)
+    window.addEventListener("unhandledrejection", handleRejection)
+    return () => {
+      window.removeEventListener("error", handleError)
+      window.removeEventListener("unhandledrejection", handleRejection)
+    }
+  }, [session])
   useEffect(() => {
     const syncHash = () => {
       const nextPage = pageFromHash() || "home"

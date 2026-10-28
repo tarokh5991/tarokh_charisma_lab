@@ -694,6 +694,45 @@ export async function getAdminOverview(session: AuthSession) {
   return (await response.json()) as AdminOverview
 }
 
+export type AdminErrorEvent = {
+  username: string | null
+  page: string
+  message: string
+  created_at: string
+}
+
+export async function logClientError(
+  session: AuthSession,
+  event: { page: string; message: string },
+) {
+  const { anonKey } = requireConfig()
+  const response = await fetch(endpoint("/rest/v1/rpc/log_client_error"), {
+    method: "POST",
+    headers: {
+      apikey: anonKey,
+      Authorization: `Bearer ${session.access_token}`,
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({ error_page: event.page, error_message: event.message }),
+  })
+  if (!response.ok) throw new Error("ثبت خطای برنامه انجام نشد.")
+}
+
+export async function getAdminRecentClientErrors(session: AuthSession) {
+  const { anonKey } = requireConfig()
+  const response = await fetch(endpoint("/rest/v1/rpc/admin_recent_client_errors"), {
+    method: "POST",
+    headers: {
+      apikey: anonKey,
+      Authorization: `Bearer ${session.access_token}`,
+      "Content-Type": "application/json",
+    },
+    body: "{}",
+  })
+  if (!response.ok) throw new Error("دریافت خطاهای اخیر انجام نشد.")
+  return (await response.json()) as AdminErrorEvent[]
+}
+
 export type AdminLesson = {
   id: string
   slug: string
