@@ -3,19 +3,31 @@ from pathlib import Path
 
 import arabic_reshaper
 from bidi.algorithm import get_display
+from docx import Document
+from docx.oxml.table import CT_Tbl
+from docx.oxml.text.paragraph import CT_P
+from docx.table import Table
+from docx.text.paragraph import Paragraph
 from PIL import Image, ImageDraw, ImageFont
 
 ROOT = Path(__file__).resolve().parents[1]
 SOURCE = ROOT / "docs" / "project-handover.md"
 OUTPUT = ROOT / "outputs" / "tarokh-project-handover-1405-07-28.pdf"
+SOURCE_DOCUMENTS = (
+    ("استراتژی مخاطب پیج کاریزما", ROOT / "uploads" / "استراتژی-مخاطب-پیج-کاریزما_d5447fd1.docx"),
+    ("برندینگ اولیه پیج کاریزما", ROOT / "uploads" / "برندینگ-اولیه-پیج-کاریزما_164d7adc.docx"),
+    ("پریزم هویت برند پیج کاریزما", ROOT / "uploads" / "پریزم-هویت-برند-پیج-کاریزما_58959d6b.docx"),
+    ("بریف محصول TAROKH", ROOT / "uploads" / "بریف-محصول-TAROKH-سند-اصلی_6cb0f111.docx"),
+)
 
 PAGE_WIDTH, PAGE_HEIGHT = 1240, 1754
 MARGIN_X, MARGIN_TOP, MARGIN_BOTTOM = 105, 120, 100
 CONTENT_WIDTH = PAGE_WIDTH - (2 * MARGIN_X)
-BACKGROUND = "#fbfaf8"
-TEXT = "#1d2939"
-MUTED = "#667085"
-ACCENT = "#126b68"
+BACKGROUND = "#090909"
+TEXT = "#f5f1e8"
+MUTED = "#a7a399"
+ACCENT = "#d6ad5c"
+LINE = "#30302c"
 FONT = "/usr/share/fonts/truetype/vazirmatn/Vazirmatn-Regular.ttf"
 FONT_BOLD = "/usr/share/fonts/truetype/vazirmatn/Vazirmatn-Bold.ttf"
 
@@ -63,11 +75,11 @@ class PdfPages:
         self.image = Image.new("RGB", (PAGE_WIDTH, PAGE_HEIGHT), BACKGROUND)
         self.draw = ImageDraw.Draw(self.image)
         self.y = MARGIN_TOP
-        self.draw.line((MARGIN_X, 76, PAGE_WIDTH - MARGIN_X, 76), fill="#d8e4e2", width=2)
+        self.draw.line((MARGIN_X, 76, PAGE_WIDTH - MARGIN_X, 76), fill=LINE, width=2)
         self.draw.text((PAGE_WIDTH - MARGIN_X, 44), rtl("پروندهٔ تحویل پروژه TAROKH Charisma Lab"), font=font(18), fill=ACCENT, anchor="ra")
 
     def finish_page(self):
-        self.draw.line((MARGIN_X, PAGE_HEIGHT - 64, PAGE_WIDTH - MARGIN_X, PAGE_HEIGHT - 64), fill="#d8e4e2", width=2)
+        self.draw.line((MARGIN_X, PAGE_HEIGHT - 64, PAGE_WIDTH - MARGIN_X, PAGE_HEIGHT - 64), fill=LINE, width=2)
         self.draw.text((MARGIN_X, PAGE_HEIGHT - 45), rtl("محرمانه — سند ادامهٔ پروژه"), font=font(16), fill=MUTED)
         self.draw.text((PAGE_WIDTH - MARGIN_X, PAGE_HEIGHT - 45), str(self.page_number), font=font(16), fill=MUTED, anchor="ra")
         self.pages.append(self.image)
@@ -96,6 +108,38 @@ class PdfPages:
         self.y += line_height(heading_font) + (18 if level == 1 else 12)
 
 
+def source_blocks(document: Document):
+    for child in document.element.body.iterchildren():
+        if isinstance(child, CT_P):
+            text = Paragraph(child, document).text.strip()
+            if text:
+                yield "paragraph", text
+        elif isinstance(child, CT_Tbl):
+            table = Table(child, document)
+            yield "table", [
+                [cell.text.strip().replace("\n", " / ") for cell in row.cells]
+                for row in table.rows
+            ]
+
+
+def append_source_documents(pages: PdfPages):
+    pages.add_heading("۱۳. پیوست‌ها — متن کامل اسناد مبنا", 1)
+    pages.add_block(
+        "چهار پیوست زیر بدون حذف یا تلخیص به این پرونده افزوده شده‌اند. جدول‌ها به‌صورت سطرهای خوانا بازچینش شده‌اند و متن تمام سلول‌ها حفظ شده است.",
+        font(21),
+    )
+    for index, (title, path) in enumerate(SOURCE_DOCUMENTS, start=1):
+        pages.add_heading(f"پیوست {index}: {title}", 2)
+        pages.add_block("متن کامل سند مبنا", font(18, True), fill=ACCENT)
+        for kind, content in source_blocks(Document(path)):
+            if kind == "paragraph":
+                pages.add_block(content, font(21), gap_after=11)
+            else:
+                pages.add_heading("جدول", 3)
+                for row in content:
+                    pages.add_block(" | ".join(row), font(19), fill=TEXT, gap_after=8)
+
+
 def render():
     pages = PdfPages()
     for raw in SOURCE.read_text(encoding="utf-8").splitlines():
@@ -115,6 +159,7 @@ def render():
             pages.add_block(line, font(21), indent=16, gap_after=7)
         else:
             pages.add_block(line.replace("**", ""), font(21), gap_after=15)
+    append_source_documents(pages)
     pages.finish_page()
     OUTPUT.parent.mkdir(parents=True, exist_ok=True)
     pages.pages[0].save(
