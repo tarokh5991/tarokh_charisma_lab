@@ -54,21 +54,30 @@ test("user profiles include the ban state needed to end blocked sessions", async
   assert.match(app, /profileIsBanned\(profile\)/)
 })
 
-test("path challenges use the two recommended CLEAR dimensions and remain user-scoped", async () => {
-  const app = await read("./src/App.tsx")
-  const migration = await read(
-    "./supabase/migrations/20261028130000_add_path_challenges.sql",
-  )
+test(
+  "path challenges use the two recommended CLEAR dimensions and remain user-scoped",
+  async () => {
+    const app = await read("./src/App.tsx")
+    const migration = await read(
+      "./supabase/migrations/20261028130000_add_path_challenges.sql",
+    )
 
-  assert.match(app, /const pathChallengeKey = \[\.\.\.recommendedDimensions\]/)
-  assert.match(app, /const assignedPathChallenges = pathChallenges\[pathChallengeKey\]/)
-  assert.match(app, /completePathChallenge/)
-  assert.match(migration, /primary key \(user_id, challenge_key\)/)
-  assert.match(migration, /user_id = auth\.uid\(\)/)
-  for (const key of ["cl-1", "ce-1", "la-2", "ar-2"]) {
-    assert.match(migration, new RegExp(`'${key}'`))
-  }
-})
+    assert.match(
+      app,
+      /const pathChallengeKey = \[\.\.\.recommendedDimensions\]/,
+    )
+    assert.match(
+      app,
+      /const assignedPathChallenges = pathChallenges\[pathChallengeKey\]/,
+    )
+    assert.match(app, /completePathChallenge/)
+    assert.match(migration, /primary key \(user_id, challenge_key\)/)
+    assert.match(migration, /user_id = auth\.uid\(\)/)
+    for (const key of ["cl-1", "ce-1", "la-2", "ar-2"]) {
+      assert.match(migration, new RegExp(`'${key}'`))
+    }
+  },
+)
 
 test("client error logging is authenticated, rate-limited, and visible to admins", async () => {
   const migration = await read(
