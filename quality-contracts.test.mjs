@@ -55,7 +55,9 @@ test("user profiles include the ban state needed to end blocked sessions", async
 })
 
 test("client error logging is authenticated, rate-limited, and visible to admins", async () => {
-  const migration = await read("./supabase/migrations/20261028110000_add_client_error_monitoring.sql")
+  const migration = await read(
+    "./supabase/migrations/20261028110000_add_client_error_monitoring.sql",
+  )
   const app = await read("./src/App.tsx")
 
   assert.match(migration, /if auth\.uid\(\) is null/)
