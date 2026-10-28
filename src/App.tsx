@@ -2573,6 +2573,7 @@ function Admin({
   const [lessons, setLessons] = useState<AdminLesson[]>([])
   const [plans, setPlans] = useState<AdminPlan[]>([])
   const [errorEvents, setErrorEvents] = useState<AdminErrorEvent[]>([])
+  const [betaFeedback, setBetaFeedback] = useState<AdminBetaFeedback[]>([])
   const [selectedUser, setSelectedUser] = useState<AdminUserDetail | null>(null)
   const [loadingUser, setLoadingUser] = useState(false)
   const [banPeriod, setBanPeriod] = useState<AdminBanPeriod>("three_days")
@@ -2599,17 +2600,19 @@ function Admin({
     else setLoading(true)
     setMessage("")
     try {
-      const [nextOverview, nextLessons, nextPlans, nextErrorEvents] =
+      const [nextOverview, nextLessons, nextPlans, nextErrorEvents, nextBetaFeedback] =
         await Promise.all([
           getAdminOverview(session),
           getAdminLessons(session),
           getAdminPlans(session),
           getAdminRecentClientErrors(session),
+          getAdminRecentBetaFeedback(session),
         ])
       setOverview(nextOverview)
       setLessons(nextLessons)
       setPlans(nextPlans)
       setErrorEvents(nextErrorEvents)
+      setBetaFeedback(nextBetaFeedback)
     } catch (error) {
       setMessage(
         error instanceof Error
@@ -3028,6 +3031,21 @@ function Admin({
                             <span>
                               {event.message} · {event.page} · {date(event.created_at)}
                             </span>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </section>
+                  <section className="admin-panel">
+                    <h3>بازخوردهای بتا</h3>
+                    {betaFeedback.length === 0 ? (
+                      <p>هنوز بازخوردی ثبت نشده است.</p>
+                    ) : (
+                      <div className="admin-activity-list">
+                        {betaFeedback.map((item) => (
+                          <div key={`${item.created_at}-${item.message}`}>
+                            <b>{item.username || "کاربر بدون نام"} · {item.rating} از ۵</b>
+                            <span>{item.message} · {date(item.created_at)}</span>
                           </div>
                         ))}
                       </div>
