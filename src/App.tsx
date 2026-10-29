@@ -15,6 +15,7 @@ import {
   getAdminRecentBetaFeedback,
   getAdminRecentClientErrors,
   getAdminUserDetail,
+  getFeaturedBetaFeedback,
   getCoachConversation,
   getCoachMessages,
   getCoachQuota,
@@ -35,6 +36,7 @@ import {
   saveSession,
   setAdminUserBan,
   setLessonPublished,
+  setAdminBetaFeedbackFeatured,
   signOut,
   submitBetaFeedback,
   updateAdminLesson,
@@ -49,6 +51,7 @@ import {
   type AdminUserDetail,
   type AuthSession,
   type ActivePlan,
+  type FeaturedBetaFeedback,
   type CoachMessage,
   type CoachQuota,
   type PublishedLesson,
@@ -576,6 +579,14 @@ function SupportWidget({ showButton }: { showButton: boolean }) {
 }
 
 function Home({ go, ...auth }: { go: (p: Page) => void } & HeaderProps) {
+  const [featuredFeedback, setFeaturedFeedback] = useState<FeaturedBetaFeedback[]>([])
+
+  useEffect(() => {
+    getFeaturedBetaFeedback()
+      .then(setFeaturedFeedback)
+      .catch(() => setFeaturedFeedback([]))
+  }, [])
+
   return (
     <>
       <Header go={go} {...auth} />
@@ -641,45 +652,26 @@ function Home({ go, ...auth }: { go: (p: Page) => void } & HeaderProps) {
             ))}
           </div>
         </section>
-        <section className="testimonials">
-          <div className="section-title">
-            <span>مسیرهای قابل تمرین</span>
-            <h2>تغییر با تمرین‌های واقعی ساخته می‌شود</h2>
-          </div>
-          <div className="testimonial-row">
-            {[
-              [
-                "اعتمادبه‌نفس",
-                "CLEAR",
-                "حضور آرام‌تر، صدای مطمئن‌تر و مرزهای روشن‌تر.",
-                "Confidence",
-              ],
-              [
-                "بیان",
-                "CLEAR",
-                "گفتن نظر در کوتاه‌ترین شکل روشن و محترمانه.",
-                "Expression",
-              ],
-              [
-                "ایجاد ارتباط",
-                "CLEAR",
-                "ساختن گفت‌وگو با توجه واقعی و دقیق.",
-                "Rapport",
-              ],
-            ].map(([name, plan, quote, focus]) => (
-              <article key={name}>
-                <div>
-                  <strong>{name}</strong>
-                  <span>{plan}</span>
-                </div>
-                <blockquote>{quote}</blockquote>
-                <small>
-                  تمرکز روی <b dir="ltr">{focus}</b>
-                </small>
-              </article>
-            ))}
-          </div>
-        </section>
+        {featuredFeedback.length > 0 && (
+          <section className="testimonials">
+            <div className="section-title">
+              <span>بازخورد کاربران</span>
+              <h2>تجربهٔ کسانی که تمرین کرده‌اند</h2>
+            </div>
+            <div className="testimonial-row">
+              {featuredFeedback.map((item) => (
+                <article key={`${item.created_at}-${item.message}`}>
+                  <div>
+                    <strong>{item.username || "کاربر کاریزما لب"}</strong>
+                    <span>{"★".repeat(item.rating)}</span>
+                  </div>
+                  <blockquote>{item.message}</blockquote>
+                  <small>امتیاز {item.rating} از ۵</small>
+                </article>
+              ))}
+            </div>
+          </section>
+        )}
       </main>
       <Footer go={go} />
     </>
@@ -2672,6 +2664,7 @@ function Admin({
   const [loading, setLoading] = useState(true)
   const [message, setMessage] = useState("")
   const [busyLesson, setBusyLesson] = useState<string | null>(null)
+  const [busyFeedback, setBusyFeedback] = useState<string | null>(null)
   const [reloading, setReloading] = useState(false)
   const [userSearch, setUserSearch] = useState("")
   const [userPlanFilter, setUserPlanFilter] = useState("all")
@@ -2740,6 +2733,28 @@ function Admin({
       )
     } finally {
       setBusyLesson(null)
+    }
+  }
+  const toggleFeedbackFeatured = async (feedback: AdminBetaFeedback) => {
+    setBusyFeedback(feedback.id)
+    setMessage("")
+    try {
+      await setAdminBetaFeedbackFeatured(session, feedback.id, !feedback.is_featured)
+      setBetaFeedback((current) =>
+        current.map((item) =>
+          item.id === feedback.id
+            ? { ...item, is_featured: !item.is_featured }
+            : item,
+        ),
+      )
+    } catch (error) {
+      setMessage(
+        error instanceof Error
+          ? error.message
+          : "تغییر بازخوردهای صفحهٔ خانه انجام نشد.",
+      )
+    } finally {
+      setBusyFeedback(null)
     }
   }
   const exportCsv = (
@@ -3129,14 +3144,26 @@ function Admin({
                   </section>
                   <section className="admin-panel">
                     <h3>بازخوردهای بتا</h3>
+                    <p className="admin-hint">حداکثر سه بازخورد امتیازی را برای نمایش زیر مسیر CLEAR انتخاب کن.</p>
                     {betaFeedback.length === 0 ? (
                       <p>هنوز بازخوردی ثبت نشده است.</p>
                     ) : (
                       <div className="admin-activity-list">
                         {betaFeedback.map((item) => (
-                          <div key={`${item.created_at}-${item.message}`}>
+                          <div key={item.id}>
                             <b>{item.username || "کاربر بدون نام"} · {item.rating} از ۵</b>
                             <span>{item.message} · {date(item.created_at)}</span>
+                            <button
+                              className={`publish-toggle${item.is_featured ? " on" : ""}`}
+                              onClick={() => toggleFeedbackFeatured(item)}
+                              disabled={busyFeedback === item.id || (!item.is_featured && betaFeedback.filter((feedback) => feedback.is_featured).length >= 3)}
+                            >
+                              {busyFeedback === item.id
+                                ? "در حال ذخیره…"
+                                : item.is_featured
+                                  ? "حذف از خانه"
+                                  : "افزودن به خانه"}
+                            </button>
                           </div>
                         ))}
                       </div>

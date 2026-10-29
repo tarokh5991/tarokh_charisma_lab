@@ -776,6 +776,15 @@ export async function getAdminRecentClientErrors(session: AuthSession) {
 }
 
 export type AdminBetaFeedback = {
+  id: string
+  username: string | null
+  rating: number
+  message: string
+  is_featured: boolean
+  created_at: string
+}
+
+export type FeaturedBetaFeedback = {
   username: string | null
   rating: number
   message: string
@@ -806,6 +815,39 @@ export async function getAdminRecentBetaFeedback(session: AuthSession) {
   if (!response.ok) throw new Error("دریافت بازخوردهای بتا انجام نشد.")
   return (await response.json()) as AdminBetaFeedback[]
 }
+
+export async function setAdminBetaFeedbackFeatured(
+  session: AuthSession,
+  feedbackId: string,
+  featured: boolean,
+) {
+  const { anonKey } = requireConfig()
+  const response = await fetch(
+    endpoint("/rest/v1/rpc/admin_set_beta_feedback_featured"),
+    {
+      method: "POST",
+      headers: {
+        apikey: anonKey,
+        Authorization: `Bearer ${session.access_token}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({ feedback_id: feedbackId, featured }),
+    },
+  )
+  if (!response.ok) throw new Error("تغییر بازخوردهای صفحهٔ خانه انجام نشد.")
+}
+
+export async function getFeaturedBetaFeedback() {
+  const { anonKey } = requireConfig()
+  const response = await fetch(endpoint("/rest/v1/rpc/featured_beta_feedback"), {
+    method: "POST",
+    headers: { apikey: anonKey, "Content-Type": "application/json" },
+    body: "{}",
+  })
+  if (!response.ok) throw new Error("دریافت بازخوردهای صفحهٔ خانه انجام نشد.")
+  return (await response.json()) as FeaturedBetaFeedback[]
+}
+
 
 export type AdminLesson = {
   id: string
