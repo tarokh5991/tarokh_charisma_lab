@@ -666,7 +666,9 @@ function Home({ go, ...auth }: { go: (p: Page) => void } & HeaderProps) {
                     <span>{"★".repeat(item.rating)}</span>
                   </div>
                   <blockquote>{item.message}</blockquote>
-                  <small>امتیاز {item.rating} از ۵</small>
+                  <small>
+                    {item.plan_name || "بدون پلن فعال"} · ثبت‌شده در {new Date(item.created_at).toLocaleDateString("fa-IR")}
+                  </small>
                 </article>
               ))}
             </div>
@@ -3152,7 +3154,9 @@ function Admin({
                         {betaFeedback.map((item) => (
                           <div key={item.id}>
                             <b>{item.username || "کاربر بدون نام"} · {item.rating} از ۵</b>
-                            <span>{item.message} · {date(item.created_at)}</span>
+                            <span>
+                              {item.message} · {item.plan_name || "بدون پلن فعال"} · {date(item.created_at)}
+                            </span>
                             <button
                               className={`publish-toggle${item.is_featured ? " on" : ""}`}
                               onClick={() => toggleFeedbackFeatured(item)}

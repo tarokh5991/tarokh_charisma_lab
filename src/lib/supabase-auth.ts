@@ -778,6 +778,7 @@ export async function getAdminRecentClientErrors(session: AuthSession) {
 export type AdminBetaFeedback = {
   id: string
   username: string | null
+  plan_name: string | null
   rating: number
   message: string
   is_featured: boolean
@@ -786,6 +787,7 @@ export type AdminBetaFeedback = {
 
 export type FeaturedBetaFeedback = {
   username: string | null
+  plan_name: string | null
   rating: number
   message: string
   created_at: string
