@@ -12,7 +12,7 @@ from PIL import Image, ImageDraw, ImageFont
 
 ROOT = Path(__file__).resolve().parents[1]
 SOURCE = ROOT / "docs" / "project-handover.md"
-OUTPUT = ROOT / "outputs" / "tarokh-project-handover-1405-07-28.pdf"
+OUTPUT = ROOT / "outputs" / "تحویل-پروژه-تارخ-۱۴۰۵-۰۷-۲۸.pdf"
 SOURCE_DOCUMENTS = (
     ("استراتژی مخاطب پیج کاریزما", ROOT / "uploads" / "استراتژی-مخاطب-پیج-کاریزما_d5447fd1.docx"),
     ("برندینگ اولیه پیج کاریزما", ROOT / "uploads" / "برندینگ-اولیه-پیج-کاریزما_164d7adc.docx"),
