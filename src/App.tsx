@@ -23,6 +23,7 @@ import {
   getLessonProgress,
   getPathChallengeProgress,
   getMonthlyChallengeProgress,
+  getWeeklyLeaderboard,
   getPublishedLessons,
   getPurchaseHistory,
   getStoredSession,
@@ -56,6 +57,7 @@ import {
   type CoachQuota,
   type PublishedLesson,
   type PurchaseRecord,
+  type WeeklyLeaderboardEntry,
   type UserProfile,
 } from "./lib/supabase-auth"
 
@@ -1203,6 +1205,7 @@ function Dashboard({
 }) {
   const [showLeaders, setShowLeaders] = useState(false)
   const [showMe, setShowMe] = useState(true)
+  const [leaders, setLeaders] = useState<WeeklyLeaderboardEntry[]>([])
   const [lessons, setLessons] = useState<PublishedLesson[]>([])
   const [completedIds, setCompletedIds] = useState<Set<string>>(new Set())
   const [streak, setStreak] = useState(0)
@@ -1431,6 +1434,11 @@ function Dashboard({
       })
       .catch(() => {})
   }, [session])
+  useEffect(() => {
+    getWeeklyLeaderboard(session)
+      .then(setLeaders)
+      .catch(() => setLeaders([]))
+  }, [session])
   const completedCount = completedIds.size
   const unlockedLessons = lessons.filter(
     (lesson, index) => index === 0 || completedIds.has(lessons[index - 1].id),
@@ -1500,18 +1508,13 @@ function Dashboard({
       setMonthlyChallengeSaving(false)
     }
   }
-  const leaders = [
-    ["ش", "شاهین آرام", "۱۴"],
-    ["ک", "کاوشگر شب", "۱۲"],
-    ["م", "مرد مسیر", "۱۱"],
-    ["ذ", "ذهن روشن", "۱۰"],
-    ["س", "سرو استوار", "۹"],
-    ["ر", "رهرو آرام", "۹"],
-    ["ن", "نقطه شروع", "۸"],
-    ["پ", "پلنگ صبور", "۷"],
-    ["ق", "قاب طلایی", "۷"],
-    ["گ", "گام بعدی", "۶"],
-  ]
+  const visibleLeaders = leaders.filter(
+    (leader) => showMe || leader.user_id !== session.user.id,
+  )
+  const myLeaderboardIndex = leaders.findIndex(
+    (leader) => leader.user_id === session.user.id,
+  )
+  const myLeaderboard = leaders[myLeaderboardIndex]
   return (
     <>
       <Header
@@ -1704,18 +1707,28 @@ function Dashboard({
             </button>
           </div>
           <div className="leader-list">
-            {leaders
-              .slice(0, showLeaders ? 10 : 3)
-              .map(([initial, name, count], index) => (
-                <div className="leader-row" key={name}>
-                  <b className="rank">{index + 1}</b>
-                  <span className="leader-avatar">{initial}</span>
-                  <strong>{name}</strong>
-                  <span className="practice-count">
-                    <b>{count}</b> تمرین
-                  </span>
-                </div>
-              ))}
+            {visibleLeaders.length === 0 ? (
+              <p>هنوز تمرینی برای این هفته ثبت نشده است.</p>
+            ) : (
+              visibleLeaders
+                .slice(0, showLeaders ? 10 : 3)
+                .map((leader) => {
+                  const rank = leaders.findIndex(
+                    (item) => item.user_id === leader.user_id,
+                  ) + 1
+                  const name = leader.username || "کاربر بدون نام"
+                  return (
+                    <div className="leader-row" key={leader.user_id}>
+                      <b className="rank">{rank}</b>
+                      <span className="leader-avatar">{name.slice(0, 1)}</span>
+                      <strong>{name}</strong>
+                      <span className="practice-count">
+                        <b>{leader.practice_count.toLocaleString("fa-IR")}</b> تمرین
+                      </span>
+                    </div>
+                  )
+                })
+            )}
           </div>
           <button
             className="show-leaders"
@@ -1724,17 +1737,21 @@ function Dashboard({
             {showLeaders ? "نمایش سه نفر اول" : "مشاهده‌ی همه"}
           </button>
           <div className="my-rank">
-            <span className="leader-avatar">آ</span>
+            <span className="leader-avatar">
+              {(displayName || "تو").slice(0, 1)}
+            </span>
             <div>
-              <strong>رتبه‌ی تو: ۱۸</strong>
+              <strong>
+                رتبهٔ تو: {myLeaderboardIndex >= 0 ? myLeaderboardIndex + 1 : "—"}
+              </strong>
               <small>
                 {showMe
-                  ? "نام مستعار تو در جدول نمایش داده می‌شود"
+                  ? "نام کاربری تو در جدول نمایش داده می‌شود"
                   : "تو در جدول دیگران نمایش داده نمی‌شوی"}
               </small>
             </div>
             <span className="practice-count">
-              <b>۴</b> تمرین
+              <b>{(myLeaderboard?.practice_count || 0).toLocaleString("fa-IR")}</b> تمرین
             </span>
           </div>
           <p className="leader-note">

@@ -851,6 +851,27 @@ export async function getFeaturedBetaFeedback() {
 }
 
 
+export type WeeklyLeaderboardEntry = {
+  user_id: string
+  username: string | null
+  practice_count: number
+}
+
+export async function getWeeklyLeaderboard(session: AuthSession) {
+  const { anonKey } = requireConfig()
+  const response = await fetch(endpoint("/rest/v1/rpc/weekly_leaderboard"), {
+    method: "POST",
+    headers: {
+      apikey: anonKey,
+      Authorization: `Bearer ${session.access_token}`,
+      "Content-Type": "application/json",
+    },
+    body: "{}",
+  })
+  if (!response.ok) throw new Error("دریافت رتبه‌بندی هفتگی انجام نشد.")
+  return (await response.json()) as WeeklyLeaderboardEntry[]
+}
+
 export type AdminLesson = {
   id: string
   slug: string
