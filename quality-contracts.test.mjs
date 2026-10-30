@@ -73,6 +73,23 @@ test("path challenges use the two recommended CLEAR dimensions and remain user-s
   }
 })
 
+test("email signup rejects an address already associated with an account", async () => {
+  const app = await read("./src/App.tsx")
+  const auth = await read("./src/lib/supabase-auth.ts")
+  const migration = await read(
+    "./supabase/migrations/20261030100000_prevent_duplicate_email_signup.sql",
+  )
+
+  assert.match(app, /signup && accountTab === "email"/)
+  assert.match(app, /registrationEmailExists\(identifier\.trim\(\)\)/)
+  assert.match(auth, /registration_email_exists/)
+  assert.match(migration, /add column email_hash text/)
+  assert.match(
+    migration,
+    /grant execute on function public\.registration_email_exists\(text\) to anon, authenticated/,
+  )
+})
+
 test("client error logging is authenticated, rate-limited, and visible to admins", async () => {
   const migration = await read(
     "./supabase/migrations/20261028110000_add_client_error_monitoring.sql",

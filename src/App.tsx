@@ -30,6 +30,7 @@ import {
   getUserProfile,
   logClientError,
   requestCoachReply,
+  registrationEmailExists,
   requestOtp,
   restoreSession,
   saveAssessment,
@@ -892,6 +893,10 @@ function Auth({
     setBusy(true)
     setMessage("")
     try {
+      if (signup && accountTab === "email" && await registrationEmailExists(identifier.trim())) {
+        setMessage("با این ایمیل قبلاً حساب ساخته شده است. از بخش «ورود» وارد حساب شو.")
+        return
+      }
       await requestOtp(
         identifier.trim(),
         accountTab,

@@ -84,6 +84,20 @@ function normalizeIdentifier(value: string, mode: AuthMode) {
   return digits
 }
 
+export async function registrationEmailExists(email: string) {
+  const { anonKey } = requireConfig()
+  const response = await fetch(
+    endpoint("/rest/v1/rpc/registration_email_exists"),
+    {
+      method: "POST",
+      headers: { apikey: anonKey, "Content-Type": "application/json" },
+      body: JSON.stringify({ input_email: normalizeIdentifier(email, "email") }),
+    },
+  )
+  if (!response.ok) throw new Error("بررسی ایمیل ثبت‌نام انجام نشد.")
+  return (await response.json()) as boolean
+}
+
 export function requestOtp(
   value: string,
   mode: AuthMode,
