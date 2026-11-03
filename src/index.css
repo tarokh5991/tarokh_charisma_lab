@@ -26,3 +26,17 @@
  .admin-heading{flex-direction:column;align-items:flex-start}.admin-heading h1{font-size:28px}.admin-stats{grid-template-columns:repeat(2,1fr)}.admin-panel{padding:20px 18px}.admin-tabs button{padding:11px 12px;font-size:12px}.admin-lesson{flex-direction:column;align-items:stretch}.publish-toggle{width:100%}.admin-price-list{grid-template-columns:repeat(2,1fr)}.admin-detail-backdrop{padding:16px 10px}.admin-detail-head,.admin-detail-body{padding:20px}.admin-detail-profile{grid-template-columns:1fr}
  .testimonials{padding:70px 20px;overflow:hidden}.testimonial-row{display:flex;overflow-x:auto;scroll-snap-type:x mandatory;padding-bottom:12px;margin-left:-20px}.testimonial-row article{min-width:82vw;scroll-snap-align:start}.leaderboard{padding:22px 16px}.leader-head{align-items:flex-start;gap:15px}.privacy-toggle{flex-direction:column-reverse;align-items:flex-end}.leader-row{grid-template-columns:24px 36px 1fr auto;gap:8px}.my-rank{padding:12px 10px}
 }
+
+.theme-toggle{display:inline-flex;align-items:center;gap:7px;border:1px solid var(--line);background:transparent;color:var(--muted);padding:8px 11px;font-size:11px;white-space:nowrap}.theme-toggle:hover{border-color:var(--gold);color:var(--gold)}.theme-toggle>span:first-child{font-size:17px;line-height:1;color:var(--gold)}
+html[data-theme="light"]{--bg:#f5f1e8;--surface:#fffdf7;--surface2:#eee8da;--gold:#9a711f;--gold2:#bd9134;--text:#191714;--muted:#6f695f;--line:#d7cebd}
+html[data-theme="light"] body{background:var(--bg)}
+html[data-theme="light"] .header{background:#f5f1e8ee;border-color:var(--line)}
+html[data-theme="light"] .clear,html[data-theme="light"] .testimonials,html[data-theme="light"] .footer{background:#eee8da}
+html[data-theme="light"] .auth-card,html[data-theme="light"] .chat,html[data-theme="light"] .mobile-menu,html[data-theme="light"] .support-panel{background:var(--surface)}
+html[data-theme="light"] input,html[data-theme="light"] .choices button,html[data-theme="light"] .beta-feedback-controls select,html[data-theme="light"] .beta-feedback-controls textarea{background:#fffdf7;color:var(--text)}
+html[data-theme="light"] .chat{background:#f0eadc}
+html[data-theme="light"] .message p{background:#fffdf7}
+html[data-theme="light"] .message.me p{background:#ead9b5}
+html[data-theme="light"] .footer>small{color:#81796c}
+
+@media(max-width:800px){.theme-toggle{position:absolute;left:68px;top:13px;padding:7px 9px}.theme-toggle>span:last-child{display:none}}

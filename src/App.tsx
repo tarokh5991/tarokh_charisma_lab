@@ -243,6 +243,38 @@ type HeaderProps = {
   isAdmin?: boolean
 }
 
+function ThemeToggle() {
+  const [light, setLight] = useState(() =>
+    typeof window !== "undefined" && localStorage.getItem("tarokh-theme") === "light",
+  )
+  useEffect(() => {
+    const applyTheme = (nextLight: boolean) => {
+      document.documentElement.dataset.theme = nextLight ? "light" : "dark"
+    }
+    const syncTheme = () => setLight(localStorage.getItem("tarokh-theme") === "light")
+    applyTheme(light)
+    window.addEventListener("tarokh-theme-change", syncTheme)
+    return () => window.removeEventListener("tarokh-theme-change", syncTheme)
+  }, [light])
+  const toggle = () => {
+    const nextLight = !light
+    localStorage.setItem("tarokh-theme", nextLight ? "light" : "dark")
+    document.documentElement.dataset.theme = nextLight ? "light" : "dark"
+    window.dispatchEvent(new Event("tarokh-theme-change"))
+  }
+  return (
+    <button
+      className="theme-toggle"
+      onClick={toggle}
+      aria-label={light ? "فعال‌کردن حالت شب" : "فعال‌کردن حالت روز"}
+      title={light ? "حالت شب" : "حالت روز"}
+    >
+      <span aria-hidden="true">{light ? "☾" : "☼"}</span>
+      <span>{light ? "حالت شب" : "حالت روز"}</span>
+    </button>
+  )
+}
+
 const Header = ({
   go,
   simple = false,
@@ -345,6 +377,7 @@ const Header = ({
           )}
         </div>
       )}
+      {!simple && <ThemeToggle />}
       {authenticated ? (
         <div className="account-actions">
           <button className="header-user" onClick={() => navigate("profile")}>
