@@ -247,31 +247,64 @@ function ThemeToggle() {
   const [light, setLight] = useState(() =>
     typeof window !== "undefined" && localStorage.getItem("tarokh-theme") === "light",
   )
+  const [transition, setTransition] = useState<{
+    light: boolean
+    x: number
+    y: number
+    radius: number
+  } | null>(null)
   useEffect(() => {
-    const applyTheme = (nextLight: boolean) => {
-      document.documentElement.dataset.theme = nextLight ? "light" : "dark"
-    }
-    const syncTheme = () => setLight(localStorage.getItem("tarokh-theme") === "light")
-    applyTheme(light)
-    window.addEventListener("tarokh-theme-change", syncTheme)
-    return () => window.removeEventListener("tarokh-theme-change", syncTheme)
-  }, [light])
-  const toggle = () => {
+    document.documentElement.dataset.theme = light ? "light" : "dark"
+  }, [])
+  const toggle = (event: React.MouseEvent<HTMLButtonElement>) => {
+    if (transition) return
     const nextLight = !light
+    const bounds = event.currentTarget.getBoundingClientRect()
+    const x = bounds.left + bounds.width / 2
+    const y = bounds.top + bounds.height / 2
+    const width = window.innerWidth
+    const height = window.innerHeight
+    const radius = Math.max(
+      Math.hypot(x, y),
+      Math.hypot(width - x, y),
+      Math.hypot(x, height - y),
+      Math.hypot(width - x, height - y),
+    )
     localStorage.setItem("tarokh-theme", nextLight ? "light" : "dark")
-    document.documentElement.dataset.theme = nextLight ? "light" : "dark"
-    window.dispatchEvent(new Event("tarokh-theme-change"))
+    setLight(nextLight)
+    setTransition({ light: nextLight, x, y, radius })
   }
   return (
-    <button
-      className="theme-toggle"
-      onClick={toggle}
-      aria-label={light ? "فعال‌کردن حالت شب" : "فعال‌کردن حالت روز"}
-      title={light ? "حالت شب" : "حالت روز"}
-    >
-      <span aria-hidden="true">{light ? "☾" : "☼"}</span>
-      <span>{light ? "حالت شب" : "حالت روز"}</span>
-    </button>
+    <>
+      <button
+        className="theme-toggle"
+        onClick={toggle}
+        disabled={Boolean(transition)}
+        aria-label={light ? "فعال‌کردن حالت شب" : "فعال‌کردن حالت روز"}
+        title={light ? "حالت شب" : "حالت روز"}
+      >
+        <span aria-hidden="true">{light ? "☾" : "☼"}</span>
+        <span>{light ? "حالت شب" : "حالت روز"}</span>
+      </button>
+      {transition && (
+        <span
+          className="theme-wave"
+          style={{
+            left: transition.x - transition.radius,
+            top: transition.y - transition.radius,
+            width: transition.radius * 2,
+            height: transition.radius * 2,
+            background: transition.light ? "#f5f1e8" : "#090909",
+          }}
+          onAnimationEnd={() => {
+            document.documentElement.dataset.theme = transition.light
+              ? "light"
+              : "dark"
+            setTransition(null)
+          }}
+        />
+      )}
+    </>
   )
 }
 
