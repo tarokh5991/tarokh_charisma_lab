@@ -12,7 +12,8 @@ from PIL import Image, ImageDraw, ImageFont
 
 ROOT = Path(__file__).resolve().parents[1]
 SOURCE = ROOT / "docs" / "project-handover.md"
-OUTPUT = ROOT / "outputs" / "گزارش سایت.pdf"
+OUTPUT = ROOT / "outputs" / "گزارش سایت-نسخه-۲.pdf"
+PDF_VERSION = "نسخهٔ ۲"
 SOURCE_DOCUMENTS = (
     ("استراتژی مخاطب پیج کاریزما", ROOT / "uploads" / "استراتژی-مخاطب-پیج-کاریزما_d5447fd1.docx"),
     ("برندینگ اولیه پیج کاریزما", ROOT / "uploads" / "برندینگ-اولیه-پیج-کاریزما_164d7adc.docx"),
@@ -76,7 +77,7 @@ class PdfPages:
         self.draw = ImageDraw.Draw(self.image)
         self.y = MARGIN_TOP
         self.draw.line((MARGIN_X, 76, PAGE_WIDTH - MARGIN_X, 76), fill=LINE, width=2)
-        self.draw.text((PAGE_WIDTH - MARGIN_X, 44), rtl("پروندهٔ تحویل پروژه TAROKH Charisma Lab"), font=font(18), fill=ACCENT, anchor="ra")
+        self.draw.text((PAGE_WIDTH - MARGIN_X, 44), rtl(f"گزارش سایت TAROKH Charisma Lab · {PDF_VERSION}"), font=font(18), fill=ACCENT, anchor="ra")
 
     def finish_page(self):
         self.draw.line((MARGIN_X, PAGE_HEIGHT - 64, PAGE_WIDTH - MARGIN_X, PAGE_HEIGHT - 64), fill=LINE, width=2)
