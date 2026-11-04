@@ -44,6 +44,7 @@ import {
   signUpWithPassword,
   submitBetaFeedback,
   updateAdminLesson,
+  updatePassword,
   updateUserProfile,
   verifyOtp,
   type AdminBanPeriod,
@@ -179,6 +180,18 @@ const Icon = ({ name }: { name: string }) => {
         <path d="M12 16v-5M12 8h.01" />
       </>
     ),
+    eye: (
+      <>
+        <path d="M2.5 12s3.5-5 9.5-5 9.5 5 9.5 5-3.5 5-9.5 5-9.5-5-9.5-5Z" />
+        <circle cx="12" cy="12" r="2.5" />
+      </>
+    ),
+    eyeOff: (
+      <>
+        <path d="m3 3 18 18" />
+        <path d="M10.6 7.2A10.8 10.8 0 0 1 12 7c6 0 9.5 5 9.5 5a17 17 0 0 1-3.2 3.4M6.4 6.4C3.9 7.9 2.5 12 2.5 12s3.5 5 9.5 5c1 0 2-.2 2.8-.5" />
+      </>
+    ),
     help: (
       <>
         <circle cx="12" cy="12" r="9" />
@@ -216,7 +229,46 @@ const Icon = ({ name }: { name: string }) => {
   )
 }
 
-const Button = ({
+function PasswordField({
+  label,
+  value,
+  onChange,
+  autoComplete,
+  placeholder,
+}: {
+  label: string
+  value: string
+  onChange: (value: string) => void
+  autoComplete: string
+  placeholder: string
+}) {
+  const [visible, setVisible] = useState(false)
+  return (
+    <label className="password-field">
+      {label}
+      <span className="password-input-wrap">
+        <input
+          value={value}
+          onChange={(event) => onChange(event.target.value)}
+          dir="ltr"
+          type={visible ? "text" : "password"}
+          autoComplete={autoComplete}
+          minLength={8}
+          placeholder={placeholder}
+        />
+        <button
+          type="button"
+          className="password-visibility"
+          aria-label={visible ? "مخفی‌کردن رمز عبور" : "نمایش رمز عبور"}
+          onClick={() => setVisible((current) => !current)}
+        >
+          <Icon name={visible ? "eyeOff" : "eye"} />
+        </button>
+      </span>
+    </label>
+  )
+}
+
   children,
   onClick,
   ghost = false,
@@ -1170,31 +1222,21 @@ function Auth({
       )}
       {accountTab === "email" && authMethod === "password" && (
         <>
-          <label>
-            رمز عبور
-            <input
-              value={password}
-              onChange={(event) => setPassword(event.target.value)}
-              dir="ltr"
-              type="password"
-              autoComplete={login ? "current-password" : "new-password"}
-              minLength={8}
-              placeholder="حداقل ۸ کاراکتر"
-            />
-          </label>
+          <PasswordField
+            label="رمز عبور"
+            value={password}
+            onChange={setPassword}
+            autoComplete={login ? "current-password" : "new-password"}
+            placeholder="حداقل ۸ کاراکتر"
+          />
           {!login && (
-            <label>
-              تکرار رمز عبور
-              <input
-                value={passwordConfirmation}
-                onChange={(event) => setPasswordConfirmation(event.target.value)}
-                dir="ltr"
-                type="password"
-                autoComplete="new-password"
-                minLength={8}
-                placeholder="رمز را دوباره وارد کن"
-              />
-            </label>
+            <PasswordField
+              label="تکرار رمز عبور"
+              value={passwordConfirmation}
+              onChange={setPasswordConfirmation}
+              autoComplete="new-password"
+              placeholder="رمز را دوباره وارد کن"
+            />
           )}
         </>
       )}
@@ -2072,6 +2114,10 @@ function Profile({
   const [feedbackMessage, setFeedbackMessage] = useState("")
   const [sendingFeedback, setSendingFeedback] = useState(false)
   const [feedbackStatus, setFeedbackStatus] = useState("")
+  const [newPassword, setNewPassword] = useState("")
+  const [newPasswordConfirmation, setNewPasswordConfirmation] = useState("")
+  const [passwordSaving, setPasswordSaving] = useState(false)
+  const [passwordStatus, setPasswordStatus] = useState("")
   useEffect(() => {
     getPurchaseHistory(session)
       .then(setPurchases)
@@ -2091,6 +2137,21 @@ function Profile({
       )
     } finally {
       setSaving(false)
+    }
+  }
+  const savePassword = async () => {
+    if (newPassword.length < 8 || newPassword !== newPasswordConfirmation) return
+    setPasswordSaving(true)
+    setPasswordStatus("")
+    try {
+      await updatePassword(session, newPassword)
+      setNewPassword("")
+      setNewPasswordConfirmation("")
+      setPasswordStatus("رمز عبور با موفقیت ذخیره شد.")
+    } catch (error) {
+      setPasswordStatus(error instanceof Error ? error.message : "تغییر رمز عبور انجام نشد.")
+    } finally {
+      setPasswordSaving(false)
     }
   }
   const sendFeedback = async () => {
@@ -2202,6 +2263,35 @@ function Profile({
               <strong className="profile-status">فعال</strong>
             </div>
           </div>
+        </section>
+        <section className="purchase-history password-settings">
+          <div className="section-head">
+            <h3>رمز عبور</h3>
+          </div>
+          <p>اگر رمز عبور نداری یا می‌خواهی آن را تغییر دهی، رمز جدیدت را ثبت کن.</p>
+          <div className="password-settings-fields">
+            <PasswordField
+              label="رمز عبور جدید"
+              value={newPassword}
+              onChange={setNewPassword}
+              autoComplete="new-password"
+              placeholder="حداقل ۸ کاراکتر"
+            />
+            <PasswordField
+              label="تکرار رمز عبور جدید"
+              value={newPasswordConfirmation}
+              onChange={setNewPasswordConfirmation}
+              autoComplete="new-password"
+              placeholder="رمز را دوباره وارد کن"
+            />
+            <Button
+              onClick={savePassword}
+              disabled={passwordSaving || newPassword.length < 8 || newPassword !== newPasswordConfirmation}
+            >
+              {passwordSaving ? "در حال ذخیره…" : "ذخیرهٔ رمز عبور"}
+            </Button>
+          </div>
+          {passwordStatus && <p className="profile-message">{passwordStatus}</p>}
         </section>
         <section className="purchase-history beta-feedback-form">
           <div className="section-head"><h3>بازخورد نسخهٔ بتا</h3></div>

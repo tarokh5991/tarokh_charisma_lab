@@ -118,6 +118,29 @@ export async function signUpWithPassword(
   return (result.access_token ? result : null) as AuthSession | null
 }
 
+export async function updatePassword(session: AuthSession, password: string) {
+  const { anonKey } = requireConfig()
+  const response = await fetch(endpoint("/auth/v1/user"), {
+    method: "PUT",
+    headers: {
+      apikey: anonKey,
+      Authorization: `Bearer ${session.access_token}`,
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({ password }),
+  })
+  if (!response.ok) {
+    const payload = (await response.json().catch(() => null)) as {
+      msg?: string
+      message?: string
+      error_description?: string
+    } | null
+    throw new Error(
+      payload?.msg || payload?.message || payload?.error_description || "تغییر رمز عبور انجام نشد.",
+    )
+  }
+}
+
 export function requestOtp(
   value: string,
   mode: AuthMode,

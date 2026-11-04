@@ -98,7 +98,9 @@ test("email password authentication supports signup and login", async () => {
   assert.match(app, /password\.length < 8/)
   assert.match(app, /password !== passwordConfirmation/)
   assert.match(auth, /auth\/v1\/token\?grant_type=password/)
-  assert.match(auth, /auth\/v1\/signup/)
+  assert.match(app, /PasswordField/)
+  assert.match(app, /updatePassword/)
+  assert.match(auth, /auth\/v1\/user/)
 })
 test("client error logging is authenticated, rate-limited, and visible to admins", async () => {
   const migration = await read(
