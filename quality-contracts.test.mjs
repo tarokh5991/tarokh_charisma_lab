@@ -90,6 +90,16 @@ test("email signup rejects an address already associated with an account", async
   )
 })
 
+test("email password authentication supports signup and login", async () => {
+  const app = await read("./src/App.tsx")
+  const auth = await read("./src/lib/supabase-auth.ts")
+
+  assert.match(app, /authMethod === "password"/)
+  assert.match(app, /password\.length < 8/)
+  assert.match(app, /password !== passwordConfirmation/)
+  assert.match(auth, /auth\/v1\/token\?grant_type=password/)
+  assert.match(auth, /auth\/v1\/signup/)
+})
 test("client error logging is authenticated, rate-limited, and visible to admins", async () => {
   const migration = await read(
     "./supabase/migrations/20261028110000_add_client_error_monitoring.sql",

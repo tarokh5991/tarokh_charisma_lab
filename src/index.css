@@ -41,3 +41,4 @@ html[data-theme="light"] .footer>small{color:#81796c}
 
 @media(max-width:800px){.theme-toggle{position:absolute;left:68px;top:13px;padding:7px 9px}.theme-toggle>span:last-child{display:none}}
 .theme-toggle:disabled{cursor:wait;opacity:.8}.theme-wave{position:fixed;z-index:1000;border-radius:50%;pointer-events:none;transform:scale(0);animation:theme-wave-expand .7s cubic-bezier(.22,.61,.36,1) forwards}@keyframes theme-wave-expand{to{transform:scale(1)}}
+.auth-method-tabs{display:grid;grid-template-columns:1fr 1fr;border-bottom:1px solid var(--line);margin-top:18px}.auth-method-tabs button{height:42px;border:0;background:none;color:var(--muted);border-bottom:2px solid transparent;font-size:11px}.auth-method-tabs button.active{color:var(--gold);border-color:var(--gold)}

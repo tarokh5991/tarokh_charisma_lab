@@ -40,6 +40,8 @@ import {
   setLessonPublished,
   setAdminBetaFeedbackFeatured,
   signOut,
+  signInWithPassword,
+  signUpWithPassword,
   submitBetaFeedback,
   updateAdminLesson,
   updateUserProfile,
@@ -868,8 +870,11 @@ function Auth({
   const [step, setStep] = useState(1)
   const [answers, setAnswers] = useState<string[][]>([[], [], []])
   const [accountTab, setAccountTab] = useState<"mobile" | "email">("mobile")
+  const [authMethod, setAuthMethod] = useState<"otp" | "password">("otp")
   const [identifier, setIdentifier] = useState("")
   const [username, setUsername] = useState("")
+  const [password, setPassword] = useState("")
+  const [passwordConfirmation, setPasswordConfirmation] = useState("")
   const [otp, setOtp] = useState("")
   const [message, setMessage] = useState("")
   const [busy, setBusy] = useState(false)
@@ -992,42 +997,78 @@ function Auth({
       setBusy(false)
     }
   }
+  const finishAuthentication = (session: AuthSession, signup: boolean) => {
+    const savedUsername =
+      session.user.user_metadata?.username ||
+      session.user.user_metadata?.display_name
+    const profileUsername = signup ? username.trim() : savedUsername?.trim() || ""
+    const nextSession = {
+      ...session,
+      user: {
+        ...session.user,
+        user_metadata: {
+          ...session.user.user_metadata,
+          username: profileUsername || undefined,
+          display_name: profileUsername || undefined,
+        },
+      },
+    }
+    saveSession(nextSession)
+    onAuthenticated(nextSession)
+    go("home")
+    void (async () => {
+      try {
+        if (signup) {
+          await updateUserProfile(session, username)
+          await saveAssessment(session, answers, recommendation())
+        }
+      } catch {
+        // Authentication is complete even if optional profile data cannot be stored yet.
+      }
+    })()
+  }
+  const submitPassword = async (signup = false) => {
+    if (
+      accountTab !== "email" ||
+      !identifier.trim() ||
+      !password ||
+      (signup && (!username.trim() || password !== passwordConfirmation))
+    )
+      return
+    setBusy(true)
+    setMessage("")
+    try {
+      if (signup && await registrationEmailExists(identifier.trim())) {
+        setMessage("با این ایمیل قبلاً حساب ساخته شده است. از بخش «ورود» وارد حساب شو.")
+        return
+      }
+      const session = signup
+        ? await signUpWithPassword(identifier.trim(), password, username)
+        : await signInWithPassword(identifier.trim(), password)
+      if (!session) {
+        setMessage("حساب ساخته شد. ایمیل خود را تأیید کن، سپس با رمز عبور وارد شو.")
+        return
+      }
+      finishAuthentication(session, signup)
+    } catch (error) {
+      const details = error instanceof Error ? error.message : "احراز هویت با رمز عبور انجام نشد."
+      const normalized = details.toLowerCase()
+      setMessage(
+        normalized.includes("invalid login credentials") || normalized.includes("invalid")
+          ? "ایمیل یا رمز عبور نادرست است."
+          : details,
+      )
+    } finally {
+      setBusy(false)
+    }
+  }
   const confirmOtp = async () => {
     if (!otp.trim()) return
     setBusy(true)
     setMessage("")
     try {
       const session = await verifyOtp(identifier.trim(), otp.trim(), accountTab)
-      const savedUsername =
-        session.user.user_metadata?.username ||
-        session.user.user_metadata?.display_name
-      const profileUsername = isSignup
-        ? username.trim()
-        : savedUsername?.trim() || ""
-      const nextSession = {
-        ...session,
-        user: {
-          ...session.user,
-          user_metadata: {
-            ...session.user.user_metadata,
-            username: profileUsername || undefined,
-            display_name: profileUsername || undefined,
-          },
-        },
-      }
-      saveSession(nextSession)
-      onAuthenticated(nextSession)
-      go("home")
-      void (async () => {
-        try {
-          if (isSignup) {
-            await updateUserProfile(session, username)
-            await saveAssessment(session, answers, recommendation())
-          }
-        } catch {
-          // Authentication is complete even if optional profile data cannot be stored yet.
-        }
-      })()
+      finishAuthentication(session, isSignup)
     } catch (error) {
       setMessage(
         error instanceof Error ? error.message : "کد واردشده معتبر نیست.",
@@ -1050,13 +1091,20 @@ function Auth({
         </button>
       )}
       <span className="eyebrow">
-        {login ? "ورود امن با کد یک‌بارمصرف" : "آخرین قدم"}
+        {authMethod === "password"
+          ? "ورود و ثبت‌نام با رمز عبور"
+          : login
+            ? "ورود امن با کد یک‌بارمصرف"
+            : "آخرین قدم"}
       </span>
       <h2>{login ? "ورود به حساب" : "ساخت حساب"}</h2>
       <div className="auth-tabs">
         <button
           className={accountTab === "mobile" ? "active" : ""}
-          onClick={() => setAccountTab("mobile")}
+          onClick={() => {
+            setAccountTab("mobile")
+            setAuthMethod("otp")
+          }}
         >
           شماره موبایل
         </button>
@@ -1067,6 +1115,22 @@ function Auth({
           ایمیل
         </button>
       </div>
+      {accountTab === "email" && (
+        <div className="auth-method-tabs">
+          <button
+            className={authMethod === "otp" ? "active" : ""}
+            onClick={() => setAuthMethod("otp")}
+          >
+            کد یک‌بارمصرف
+          </button>
+          <button
+            className={authMethod === "password" ? "active" : ""}
+            onClick={() => setAuthMethod("password")}
+          >
+            رمز عبور
+          </button>
+        </div>
+      )}
       {!login && (
         <label>
           نام کاربری
@@ -1104,23 +1168,61 @@ function Auth({
           />
         </label>
       )}
+      {accountTab === "email" && authMethod === "password" && (
+        <>
+          <label>
+            رمز عبور
+            <input
+              value={password}
+              onChange={(event) => setPassword(event.target.value)}
+              dir="ltr"
+              type="password"
+              autoComplete={login ? "current-password" : "new-password"}
+              minLength={8}
+              placeholder="حداقل ۸ کاراکتر"
+            />
+          </label>
+          {!login && (
+            <label>
+              تکرار رمز عبور
+              <input
+                value={passwordConfirmation}
+                onChange={(event) => setPasswordConfirmation(event.target.value)}
+                dir="ltr"
+                type="password"
+                autoComplete="new-password"
+                minLength={8}
+                placeholder="رمز را دوباره وارد کن"
+              />
+            </label>
+          )}
+        </>
+      )}
       <Button
         block
-        onClick={() => submitOtp(!login)}
+        onClick={() =>
+          authMethod === "password" ? submitPassword(!login) : submitOtp(!login)
+        }
         disabled={
           busy ||
-          cooldown > 0 ||
+          (authMethod === "otp" && cooldown > 0) ||
           !identifier.trim() ||
-          (login ? false : !username.trim())
+          (login ? false : !username.trim()) ||
+          (authMethod === "password" &&
+            (password.length < 8 || (!login && password !== passwordConfirmation)))
         }
       >
         {busy
-          ? "در حال ارسال…"
-          : cooldown > 0
-            ? `ارسال دوباره تا ${cooldown} ثانیه`
-            : login
-              ? "دریافت کد ورود"
-              : "دریافت کد"}{" "}
+          ? "در حال بررسی…"
+          : authMethod === "password"
+            ? login
+              ? "ورود با رمز عبور"
+              : "ساخت حساب با رمز عبور"
+            : cooldown > 0
+              ? `ارسال دوباره تا ${cooldown} ثانیه`
+              : login
+                ? "دریافت کد ورود"
+                : "دریافت کد"}{" "}
         <Icon name="arrow" />
       </Button>
       {message && <p className="auth-message">{message}</p>}

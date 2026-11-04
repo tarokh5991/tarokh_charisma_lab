@@ -98,6 +98,26 @@ export async function registrationEmailExists(email: string) {
   return (await response.json()) as boolean
 }
 
+export async function signInWithPassword(email: string, password: string) {
+  return (await request("/auth/v1/token?grant_type=password", {
+    email: normalizeIdentifier(email, "email"),
+    password,
+  })) as AuthSession
+}
+
+export async function signUpWithPassword(
+  email: string,
+  password: string,
+  username: string,
+) {
+  const result = await request("/auth/v1/signup", {
+    email: normalizeIdentifier(email, "email"),
+    password,
+    data: { username: username.trim(), display_name: username.trim() },
+  })
+  return (result.access_token ? result : null) as AuthSession | null
+}
+
 export function requestOtp(
   value: string,
   mode: AuthMode,
