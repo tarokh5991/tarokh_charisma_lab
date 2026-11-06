@@ -7,9 +7,19 @@ const corsHeaders = {
   "Access-Control-Allow-Methods": "POST, OPTIONS",
 }
 
+type Scenario = {
+  title: string
+  context: string
+}
+
+type ChatMessage = {
+  role: "user" | "model"
+  content: string
+}
+
 type RequestBody = {
-  scenario: { title: string; context: string }
-  messages: Array<{ role: "user" | "model"; content: string }>
+  scenario: Scenario
+  messages: ChatMessage[]
   mode?: "practice" | "advisor"
   learnerContext: {
     plan: string
