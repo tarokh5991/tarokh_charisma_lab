@@ -8,8 +8,8 @@ const corsHeaders = {
 }
 
 type RequestBody = {
-  scenario: { title: string context: string }
-  messages: Array<{ role: "user" | "model" content: string }>
+  scenario: { title: string; context: string }
+  messages: Array<{ role: "user" | "model"; content: string }>
   mode?: "practice" | "advisor"
   learnerContext: {
     plan: string
