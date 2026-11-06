@@ -4689,12 +4689,6 @@ export default function App() {
     getStoredSession(),
   )
   const [profile, setProfile] = useState<UserProfile | null>(null)
-  const [passwordPrompt, setPasswordPrompt] = useState<{
-    session: AuthSession
-    password: string
-    message: string
-    busy: boolean
-  } | null>(null)
   const [page, setPage] = useState<Page>(
     () => pageFromHash() || (getStoredSession() ? "dashboard" : "home"),
   )
@@ -4728,14 +4722,6 @@ export default function App() {
         setSession(oauth)
         setPage("home")
         window.location.hash = "home"
-        if (oauth.hasPassword) {
-          setPasswordPrompt({
-            session: oauth,
-            password: "",
-            message: "",
-            busy: false,
-          })
-        }
         getUserProfile(oauth)
           .then(setProfile)
           .catch(() => setProfile(null))
@@ -5033,63 +5019,6 @@ export default function App() {
       <SupportWidget
         showButton={visiblePage === "home" || visiblePage === "dashboard"}
       />
-      {passwordPrompt && (
-        <div className="password-prompt-backdrop">
-          <div className="password-prompt">
-            <span className="eyebrow">تأیید ورود</span>
-            <h2>رمز عبور حساب را وارد کن</h2>
-            <p>
-              با گوگل وارد شدی. برای امنیت بیشتر، رمز عبور حساب سایت را هم وارد کن.
-            </p>
-            <PasswordField
-              label="رمز عبور"
-              value={passwordPrompt.password}
-              onChange={(value) =>
-                setPasswordPrompt((current) =>
-                  current ? { ...current, password: value, message: "" } : current,
-                )
-              }
-              autoComplete="current-password"
-              placeholder="رمز عبور حساب"
-            />
-            {passwordPrompt.message && (
-              <p className="auth-message">{passwordPrompt.message}</p>
-            )}
-            <div className="password-prompt-actions">
-              <Button
-                onClick={async () => {
-                  if (!passwordPrompt.password) return
-                  setPasswordPrompt((current) =>
-                    current ? { ...current, busy: true, message: "" } : current,
-                  )
-                  try {
-                    await signInWithPassword(
-                      passwordPrompt.session.user.email || "",
-                      passwordPrompt.password,
-                    )
-                    setPasswordPrompt(null)
-                  } catch {
-                    setPasswordPrompt((current) =>
-                      current
-                        ? { ...current, busy: false, message: "رمز عبور نادرست است." }
-                        : current,
-                    )
-                  }
-                }}
-                disabled={passwordPrompt.busy || !passwordPrompt.password}
-              >
-                {passwordPrompt.busy ? "در حال بررسی…" : "تأیید رمز"}
-              </Button>
-              <button
-                className="cancel-edit"
-                onClick={() => setPasswordPrompt(null)}
-              >
-                فعلاً رد کن
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
     </div>
   )
 }
