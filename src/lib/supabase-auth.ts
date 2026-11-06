@@ -6,6 +6,7 @@ export type AuthSession = {
   access_token: string
   refresh_token: string
   expires_at?: number
+  hasPassword?: boolean
   user: {
     id: string
     email?: string
@@ -140,13 +141,18 @@ export async function completeOAuthSignIn() {
     headers: { apikey: anonKey, Authorization: `Bearer ${accessToken}` },
   })
   if (!response.ok) throw new Error("ورود با گوگل انجام نشد.")
-  const user = (await response.json()) as AuthSession["user"]
+  const user = (await response.json()) as AuthSession["user"] & {
+    identities?: Array<{ provider?: string }>
+  }
   const expiresIn = Number(hash.get("expires_in") || 0)
   return {
     access_token: accessToken,
     refresh_token: refreshToken,
     expires_at: expiresIn ? Math.floor(Date.now() / 1000) + expiresIn : undefined,
     user,
+    hasPassword: Boolean(
+      user.identities?.some((identity) => identity.provider === "email"),
+    ),
   } as AuthSession
 }
 

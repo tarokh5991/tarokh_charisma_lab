@@ -270,6 +270,28 @@ function PasswordField({
     </label>
   )
 }
+
+const GoogleMark = () => (
+  <svg viewBox="0 0 48 48" aria-hidden="true" className="google-mark">
+    <path
+      fill="#EA4335"
+      d="M24 9.5c3.5 0 6.6 1.2 9 3.6l6.7-6.7C35.6 2.6 30.2 0 24 0 14.6 0 6.5 5.4 2.6 13.2l7.8 6.1C12.3 13.2 17.6 9.5 24 9.5Z"
+    />
+    <path
+      fill="#4285F4"
+      d="M46.1 24.5c0-1.6-.1-2.8-.4-4.1H24v8.4h12.5c-.3 2.1-1.6 5.2-4.6 7.3l7.6 5.9c4.5-4.2 6.6-10.3 6.6-17.5Z"
+    />
+    <path
+      fill="#FBBC05"
+      d="M10.4 28.7A14.6 14.6 0 0 1 9.6 24c0-1.6.3-3.2.8-4.7l-7.8-6.1A24 24 0 0 0 0 24c0 3.9.9 7.5 2.6 10.8l7.8-6.1Z"
+    />
+    <path
+      fill="#34A853"
+      d="M24 48c6.5 0 11.9-2.1 15.9-5.9l-7.6-5.9c-2 1.4-4.8 2.4-8.3 2.4-6.4 0-11.7-3.7-13.6-9.8l-7.8 6.1C6.5 42.6 14.6 48 24 48Z"
+    />
+  </svg>
+)
+
 const Button = ({
   children,
   onClick,
@@ -1276,8 +1298,8 @@ function Auth({
         onClick={() => startGoogleSignIn(window.location.origin + window.location.pathname)}
         disabled={busy}
       >
-        <span aria-hidden="true">G</span>
-        {login ? "ورود با گوگل" : "ثبت‌نام با گوگل"}
+        <GoogleMark />
+        <span>{login ? "ورود با گوگل" : "ثبت‌نام با گوگل"}</span>
       </button>
       {!login && (
         <small>پاسخ‌های تو فقط برای شخصی‌سازی مسیرت استفاده می‌شود.</small>
@@ -4667,6 +4689,12 @@ export default function App() {
     getStoredSession(),
   )
   const [profile, setProfile] = useState<UserProfile | null>(null)
+  const [passwordPrompt, setPasswordPrompt] = useState<{
+    session: AuthSession
+    password: string
+    message: string
+    busy: boolean
+  } | null>(null)
   const [page, setPage] = useState<Page>(
     () => pageFromHash() || (getStoredSession() ? "dashboard" : "home"),
   )
@@ -4700,6 +4728,14 @@ export default function App() {
         setSession(oauth)
         setPage("home")
         window.location.hash = "home"
+        if (oauth.hasPassword) {
+          setPasswordPrompt({
+            session: oauth,
+            password: "",
+            message: "",
+            busy: false,
+          })
+        }
         getUserProfile(oauth)
           .then(setProfile)
           .catch(() => setProfile(null))
@@ -4997,6 +5033,63 @@ export default function App() {
       <SupportWidget
         showButton={visiblePage === "home" || visiblePage === "dashboard"}
       />
+      {passwordPrompt && (
+        <div className="password-prompt-backdrop">
+          <div className="password-prompt">
+            <span className="eyebrow">تأیید ورود</span>
+            <h2>رمز عبور حساب را وارد کن</h2>
+            <p>
+              با گوگل وارد شدی. برای امنیت بیشتر، رمز عبور حساب سایت را هم وارد کن.
+            </p>
+            <PasswordField
+              label="رمز عبور"
+              value={passwordPrompt.password}
+              onChange={(value) =>
+                setPasswordPrompt((current) =>
+                  current ? { ...current, password: value, message: "" } : current,
+                )
+              }
+              autoComplete="current-password"
+              placeholder="رمز عبور حساب"
+            />
+            {passwordPrompt.message && (
+              <p className="auth-message">{passwordPrompt.message}</p>
+            )}
+            <div className="password-prompt-actions">
+              <Button
+                onClick={async () => {
+                  if (!passwordPrompt.password) return
+                  setPasswordPrompt((current) =>
+                    current ? { ...current, busy: true, message: "" } : current,
+                  )
+                  try {
+                    await signInWithPassword(
+                      passwordPrompt.session.user.email || "",
+                      passwordPrompt.password,
+                    )
+                    setPasswordPrompt(null)
+                  } catch {
+                    setPasswordPrompt((current) =>
+                      current
+                        ? { ...current, busy: false, message: "رمز عبور نادرست است." }
+                        : current,
+                    )
+                  }
+                }}
+                disabled={passwordPrompt.busy || !passwordPrompt.password}
+              >
+                {passwordPrompt.busy ? "در حال بررسی…" : "تأیید رمز"}
+              </Button>
+              <button
+                className="cancel-edit"
+                onClick={() => setPasswordPrompt(null)}
+              >
+                فعلاً رد کن
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   )
 }
