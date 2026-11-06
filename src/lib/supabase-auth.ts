@@ -118,6 +118,38 @@ export async function signUpWithPassword(
   return (result.access_token ? result : null) as AuthSession | null
 }
 
+export function startGoogleSignIn(redirectTo: string) {
+  const { url, anonKey } = requireConfig()
+  const params = new URLSearchParams({
+    provider: "google",
+    redirect_to: redirectTo,
+  })
+  window.location.assign(`${url}/auth/v1/authorize?${params.toString()}`)
+  return anonKey
+}
+
+export async function completeOAuthSignIn() {
+  const { anonKey } = requireConfig()
+  const hash = new URLSearchParams(window.location.hash.replace(/^#/, ""))
+  const errorDescription = hash.get("error_description")
+  if (errorDescription) throw new Error(errorDescription)
+  const accessToken = hash.get("access_token")
+  const refreshToken = hash.get("refresh_token")
+  if (!accessToken || !refreshToken) return null
+  const response = await fetch(endpoint("/auth/v1/user"), {
+    headers: { apikey: anonKey, Authorization: `Bearer ${accessToken}` },
+  })
+  if (!response.ok) throw new Error("ورود با گوگل انجام نشد.")
+  const user = (await response.json()) as AuthSession["user"]
+  const expiresIn = Number(hash.get("expires_in") || 0)
+  return {
+    access_token: accessToken,
+    refresh_token: refreshToken,
+    expires_at: expiresIn ? Math.floor(Date.now() / 1000) + expiresIn : undefined,
+    user,
+  } as AuthSession
+}
+
 export async function updatePassword(session: AuthSession, password: string) {
   const { anonKey } = requireConfig()
   const response = await fetch(endpoint("/auth/v1/user"), {

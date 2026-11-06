@@ -42,6 +42,8 @@ import {
   signOut,
   signInWithPassword,
   signUpWithPassword,
+  startGoogleSignIn,
+  completeOAuthSignIn,
   submitBetaFeedback,
   updateAdminLesson,
   updatePassword,
@@ -1268,6 +1270,15 @@ function Auth({
         <Icon name="arrow" />
       </Button>
       {message && <p className="auth-message">{message}</p>}
+      <div className="auth-divider"><span>یا</span></div>
+      <button
+        className="google-signin"
+        onClick={() => startGoogleSignIn(window.location.origin + window.location.pathname)}
+        disabled={busy}
+      >
+        <span aria-hidden="true">G</span>
+        {login ? "ورود با گوگل" : "ثبت‌نام با گوگل"}
+      </button>
       {!login && (
         <small>پاسخ‌های تو فقط برای شخصی‌سازی مسیرت استفاده می‌شود.</small>
       )}
@@ -4678,26 +4689,52 @@ export default function App() {
   const planRequiredPages: Page[] = ["dashboard", "library", "lesson", "coach"]
   useEffect(() => {
     let active = true
-    restoreSession().then(async (restored) => {
+    const oauthSession = window.location.hash.includes("access_token=")
+      ? completeOAuthSignIn().catch(() => null)
+      : Promise.resolve(null)
+    oauthSession.then((oauth) => {
       if (!active) return
-      setSession(restored)
-      if (restored) {
-        setProfile(await getUserProfile(restored).catch(() => null))
-        const restoredPlan = await getActivePlan(restored).catch(() => null)
-        setActivePlan(restoredPlan)
-        setPlanResolved(true)
-      } else {
-        setPlanResolved(true)
-      }
-      if (
-        !restored &&
-        page !== "home" &&
-        page !== "about" &&
-        page !== "pricing"
-      ) {
+      if (oauth) {
+        window.history.replaceState(null, "", window.location.pathname)
+        saveSession(oauth)
+        setSession(oauth)
         setPage("home")
         window.location.hash = "home"
+        getUserProfile(oauth)
+          .then(setProfile)
+          .catch(() => setProfile(null))
+        getActivePlan(oauth)
+          .then((planName) => {
+            setActivePlan(planName)
+            setPlanResolved(true)
+          })
+          .catch(() => {
+            setActivePlan(null)
+            setPlanResolved(true)
+          })
+        return
       }
+      restoreSession().then(async (restored) => {
+        if (!active) return
+        setSession(restored)
+        if (restored) {
+          setProfile(await getUserProfile(restored).catch(() => null))
+          const restoredPlan = await getActivePlan(restored).catch(() => null)
+          setActivePlan(restoredPlan)
+          setPlanResolved(true)
+        } else {
+          setPlanResolved(true)
+        }
+        if (
+          !restored &&
+          page !== "home" &&
+          page !== "about" &&
+          page !== "pricing"
+        ) {
+          setPage("home")
+          window.location.hash = "home"
+        }
+      })
     })
     return () => {
       active = false
