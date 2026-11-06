@@ -718,9 +718,9 @@ function Home({ go, ...auth }: { go: (p: Page) => void } & HeaderProps) {
           <div className="hero-copy">
             <span className="eyebrow">آزمایشگاه کاریزمای مردانه</span>
             <h1>
-              کاریزما اتفاقی نیست.
+              کاریزما بساز
               <br />
-              <em>ساختنی‌ست.</em>
+              <em>حضورت را ماندگار کن</em>
             </h1>
             <p>
               گام‌به‌گام یاد بگیر چطور با اعتماد‌به‌نفس صحبت کنی، زبان بدنت را کنترل
