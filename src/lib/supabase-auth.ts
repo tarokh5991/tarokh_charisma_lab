@@ -124,6 +124,7 @@ export function startGoogleSignIn(redirectTo: string) {
   const params = new URLSearchParams({
     provider: "google",
     redirect_to: redirectTo,
+    query_params: JSON.stringify({ prompt: "select_account" }),
   })
   window.location.assign(`${url}/auth/v1/authorize?${params.toString()}`)
   return anonKey
