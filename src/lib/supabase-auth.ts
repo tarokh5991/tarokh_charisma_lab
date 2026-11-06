@@ -120,6 +120,7 @@ export async function signUpWithPassword(
 
 export function startGoogleSignIn(redirectTo: string) {
   const { url, anonKey } = requireConfig()
+  clearSession()
   const params = new URLSearchParams({
     provider: "google",
     redirect_to: redirectTo,
