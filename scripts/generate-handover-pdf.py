@@ -12,8 +12,8 @@ from PIL import Image, ImageDraw, ImageFont
 
 ROOT = Path(__file__).resolve().parents[1]
 SOURCE = ROOT / "docs" / "project-handover.md"
-OUTPUT = ROOT / "outputs" / "گزارش سایت-نسخه-۱۷.pdf"
-PDF_VERSION = "نسخهٔ ۱۷"
+OUTPUT = ROOT / "outputs" / "گزارش سایت-نسخه-۱۸.pdf"
+PDF_VERSION = "نسخهٔ ۱۸"
 SOURCE_DOCUMENTS = (
     ("استراتژی مخاطب پیج کاریزما", ROOT / "uploads" / "استراتژی-مخاطب-پیج-کاریزما_d5447fd1.docx"),
     ("برندینگ اولیه پیج کاریزما", ROOT / "uploads" / "برندینگ-اولیه-پیج-کاریزما_164d7adc.docx"),
