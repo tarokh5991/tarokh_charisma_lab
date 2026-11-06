@@ -747,8 +747,8 @@ function Home({ go, ...auth }: { go: (p: Page) => void } & HeaderProps) {
           </div>
           <div className="portrait">
             <div className="portrait-label">
-              <span>اصل اول</span>
-              <strong>حضور، قبل از کلام آغاز می‌شود.</strong>
+              <span>شعار ما</span>
+              <strong>کاریزما بساز، حضورت را ماندگار کن.</strong>
             </div>
           </div>
         </section>
