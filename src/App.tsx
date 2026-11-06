@@ -5068,10 +5068,20 @@ export default function App() {
                       passwordPrompt.password,
                     )
                     setPasswordPrompt(null)
-                  } catch {
+                  } catch (error) {
+                    const details =
+                      error instanceof Error ? error.message : ""
                     setPasswordPrompt((current) =>
                       current
-                        ? { ...current, busy: false, message: "رمز عبور نادرست است." }
+                        ? {
+                            ...current,
+                            busy: false,
+                            message:
+                              details.toLowerCase().includes("invalid") ||
+                              details.toLowerCase().includes("credentials")
+                                ? "رمز عبور نادرست است."
+                                : details || "تأیید رمز انجام نشد. دوباره تلاش کن.",
+                          }
                         : current,
                     )
                   }
