@@ -69,6 +69,8 @@ import {
 
 type Page = "home" | "about" | "auth" | "dashboard" | "library" | "lesson" | "coach" | "pricing" | "checkout" | "profile" | "admin"
 
+const CLEAR_LESSON_TOTAL = 15
+
 const pages: Page[] = [
   "home",
   "about",
@@ -2063,7 +2065,9 @@ function Library({
           <h1>مسیرهای یادگیری</h1>
           <p>
             {lessons.length
-              ? `${lessons.length.toLocaleString("fa-IR")} درس از ۱۵ درس مسیر CLEAR آماده است؛ درس‌های بعدی در حال تولیدند.`
+              ? lessons.length >= CLEAR_LESSON_TOTAL
+                ? `همهٔ ${CLEAR_LESSON_TOTAL.toLocaleString("fa-IR")} درس مسیر CLEAR آماده است.`
+                : `${lessons.length.toLocaleString("fa-IR")} درس از ${CLEAR_LESSON_TOTAL.toLocaleString("fa-IR")} درس مسیر CLEAR آماده است؛ درس‌های بعدی در حال تولیدند.`
               : "درس‌های مسیر CLEAR در حال آماده‌سازی‌اند."}
           </p>
         </div>
