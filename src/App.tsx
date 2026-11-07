@@ -2061,7 +2061,11 @@ function Library({
         <div className="library-heading">
           <span className="eyebrow">آکادمی کاریزما</span>
           <h1>مسیرهای یادگیری</h1>
-          <p>پنج درس آغازین CLEAR را با تمرین‌های واقعی دنبال کن.</p>
+          <p>
+            {lessons.length
+              ? `${lessons.length.toLocaleString("fa-IR")} درس از ۱۵ درس مسیر CLEAR آماده است؛ درس‌های بعدی در حال تولیدند.`
+              : "درس‌های مسیر CLEAR در حال آماده‌سازی‌اند."}
+          </p>
         </div>
         {loading ? (
           <p className="library-state">در حال دریافت درس‌ها…</p>
@@ -2145,6 +2149,7 @@ function Profile({
   const [purchases, setPurchases] = useState<PurchaseRecord[]>([])
   const [feedbackRating, setFeedbackRating] = useState(5)
   const [feedbackMessage, setFeedbackMessage] = useState("")
+  const [feedbackConsent, setFeedbackConsent] = useState(false)
   const [sendingFeedback, setSendingFeedback] = useState(false)
   const [feedbackStatus, setFeedbackStatus] = useState("")
   const [newPassword, setNewPassword] = useState("")
@@ -2192,8 +2197,14 @@ function Profile({
     setSendingFeedback(true)
     setFeedbackStatus("")
     try {
-      await submitBetaFeedback(session, feedbackRating, feedbackMessage)
+      await submitBetaFeedback(
+        session,
+        feedbackRating,
+        feedbackMessage,
+        feedbackConsent,
+      )
       setFeedbackMessage("")
+      setFeedbackConsent(false)
       setFeedbackStatus("بازخوردت ثبت شد. ممنون که به بهبود نسخهٔ بتا کمک می‌کنی.")
     } catch (error) {
       setFeedbackStatus(error instanceof Error ? error.message : "ثبت بازخورد انجام نشد.")
@@ -2334,6 +2345,17 @@ function Profile({
               {[5, 4, 3, 2, 1].map((rating) => <option value={rating} key={rating}>{rating} از ۵</option>)}
             </select>
             <textarea value={feedbackMessage} onChange={(event) => setFeedbackMessage(event.target.value)} maxLength={1000} placeholder="چه چیزی خوب بود یا کجا به مشکل خوردی؟" />
+            <label className="feedback-consent">
+              <input
+                type="checkbox"
+                checked={feedbackConsent}
+                onChange={(event) => setFeedbackConsent(event.target.checked)}
+              />
+              <span>
+                اجازه می‌دهم این بازخورد با نام کاربری‌ام در صفحهٔ اصلی سایت
+                منتشر شود.
+              </span>
+            </label>
             <Button onClick={sendFeedback} disabled={sendingFeedback || !feedbackMessage.trim()}>{sendingFeedback ? "در حال ثبت…" : "ارسال بازخورد"}</Button>
           </div>
           {feedbackStatus && <p className="profile-message">{feedbackStatus}</p>}
@@ -2782,13 +2804,13 @@ function Coach({
     awareness: "آگاهی اجتماعی",
     rapport: "ایجاد ارتباط",
   }
-  const practiceLevel =
+  const scenarioDifficulty =
     learnerContext.completedLessons === 0
-      ? "شروع مسیر"
+      ? "پایه"
       : learnerContext.completedLessons <
           Math.max(2, learnerContext.totalLessons / 2)
-        ? "در حال پیشرفت"
-        : "پیشرفته‌تر"
+        ? "متوسط"
+        : "دشوارتر"
   const planGuidance: Record<string, string> = {
     برنز: "تمرین‌های کوتاه و پایه برای ساخت عادت",
     نقره: "چالش‌های بیشتر با بازخورد دقیق‌تر",
@@ -2809,7 +2831,7 @@ function Coach({
           </p>
           <section className="recommended-focus">
             <small>برنامهٔ فعلی تو</small>
-            <h3>سطح تمرینی: {practiceLevel}</h3>
+            <h3>دشواری سناریو: {scenarioDifficulty}</h3>
             <p>
               {learnerContext.recommendedDimensions.length
                 ? `تمرکز پیشنهادی: ${learnerContext.recommendedDimensions.map((dimension) => focusLabels[dimension] || dimension).join(" و ")}`
@@ -2867,6 +2889,11 @@ function Coach({
             <div className="context">
               {isAdvisor ? "موضوع مشاوره" : "سناریو"}: {current.context}
             </div>
+            <p className="chat-privacy">
+              گفت‌وگوها برای ادامهٔ تمرین در حساب تو ذخیره می‌شوند و فقط برای
+              خودت و مدیر قابل مشاهده‌اند. اگر پاسخی نامناسب دیدی، از دکمهٔ
+              پشتیبانی گزارش بده.
+            </p>
             <div className="message ai">
               <span>{isAdvisor ? "مشاور" : "مربی"}</span>
               <p>{current.prompt}</p>
@@ -3470,16 +3497,23 @@ function Admin({
                             <span>
                               {item.message} · {item.plan_name || "بدون پلن فعال"} · {date(item.created_at)}
                             </span>
+                            <span>
+                              {item.publish_consent
+                                ? "اجازهٔ انتشار عمومی داده است."
+                                : "اجازهٔ انتشار عمومی نداده است."}
+                            </span>
                             <button
                               className={`publish-toggle${item.is_featured ? " on" : ""}`}
                               onClick={() => toggleFeedbackFeatured(item)}
-                              disabled={busyFeedback === item.id || (!item.is_featured && betaFeedback.filter((feedback) => feedback.is_featured).length >= 3)}
+                              disabled={busyFeedback === item.id || (!item.is_featured && (!item.publish_consent || betaFeedback.filter((feedback) => feedback.is_featured).length >= 3))}
                             >
                               {busyFeedback === item.id
                                 ? "در حال ذخیره…"
                                 : item.is_featured
                                   ? "حذف از خانه"
-                                  : "افزودن به خانه"}
+                                  : item.publish_consent
+                                    ? "افزودن به خانه"
+                                    : "بدون اجازهٔ انتشار"}
                             </button>
                           </div>
                         ))}

@@ -129,3 +129,8 @@ html[data-theme="light"] .brand span{letter-spacing:3px}
 .password-prompt h2{font-size:24px;margin:10px 0 8px}
 .password-prompt>p{color:var(--muted);font-size:13px;line-height:1.9;margin:0 0 8px}
 .password-prompt-actions{display:flex;align-items:center;gap:14px;margin-top:18px;flex-wrap:wrap}
+
+.chat-privacy{max-width:520px;margin:0 auto 26px;text-align:center;color:var(--muted);font-size:11px;line-height:1.9;border:1px solid var(--line);border-radius:var(--radius-sm);padding:10px 14px;background:color-mix(in srgb,var(--surface) 60%,transparent)}
+
+.feedback-consent{display:flex;flex-direction:row;align-items:flex-start;gap:10px;margin:0;font-size:12px;line-height:1.8;color:var(--muted);cursor:pointer}
+.feedback-consent input{width:18px;height:18px;min-height:0;flex:0 0 18px;margin-top:2px;padding:0;accent-color:var(--gold)}

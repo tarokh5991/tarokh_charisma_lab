@@ -879,6 +879,7 @@ export type AdminBetaFeedback = {
   rating: number
   message: string
   is_featured: boolean
+  publish_consent: boolean
   created_at: string
 }
 
@@ -894,12 +895,18 @@ export async function submitBetaFeedback(
   session: AuthSession,
   rating: number,
   message: string,
+  publishConsent: boolean,
 ) {
   const { anonKey } = requireConfig()
   const response = await fetch(endpoint("/rest/v1/beta_feedback"), {
     method: "POST",
     headers: { apikey: anonKey, Authorization: `Bearer ${session.access_token}`, "Content-Type": "application/json" },
-    body: JSON.stringify({ user_id: session.user.id, rating, message: message.trim() }),
+    body: JSON.stringify({
+      user_id: session.user.id,
+      rating,
+      message: message.trim(),
+      publish_consent: publishConsent,
+    }),
   })
   if (!response.ok) throw new Error("ثبت بازخورد انجام نشد.")
 }
