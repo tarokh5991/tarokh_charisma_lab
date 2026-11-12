@@ -9,12 +9,12 @@ as $$
     select profiles.id,
            profiles.username,
            profiles.created_at,
-           coalesce(activity.practice_count, 0) as practice_count,
+           activity.practice_count,
            row_number() over (
-             order by coalesce(activity.practice_count, 0) desc, profiles.created_at asc
+             order by activity.practice_count desc, profiles.created_at asc
            )::integer as rank
     from public.profiles
-    left join (
+    join (
       select user_id, count(*)::integer as practice_count
       from public.lesson_progress
       where exercise_completed_at >= date_trunc('week', now())
@@ -22,12 +22,12 @@ as $$
     ) activity on activity.user_id = profiles.id
     where profiles.role = 'learner'
       and profiles.is_banned = false
+      and activity.practice_count > 0
   ),
   visible as (
     select * from ranked
     where public.is_admin()
        or rank <= 20
-       or id = auth.uid()
   )
   select coalesce(jsonb_agg(jsonb_build_object(
     'user_id', visible.id,

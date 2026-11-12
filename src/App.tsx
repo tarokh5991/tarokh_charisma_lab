@@ -1761,15 +1761,19 @@ function Dashboard({
     }
   }
   const visibleLeaders = leaders.filter(
-    (leader) => showMe || leader.user_id !== session.user.id,
+    (leader) =>
+      (isAdmin || leader.practice_count > 0) &&
+      (showMe || leader.user_id !== session.user.id),
   )
   const myLeaderboardIndex = leaders.findIndex(
     (leader) => leader.user_id === session.user.id,
   )
   const myLeaderboard = leaders[myLeaderboardIndex]
-  const myRank = myLeaderboard?.rank ?? (myLeaderboardIndex >= 0 ? myLeaderboardIndex + 1 : -1)
   const myPracticeCount = myLeaderboard?.practice_count || 0
   const needsPractice = !isAdmin && myPracticeCount === 0
+  const myRank = needsPractice
+    ? -1
+    : (myLeaderboard?.rank ?? (myLeaderboardIndex >= 0 ? myLeaderboardIndex + 1 : -1))
   return (
     <>
       <Header
