@@ -1768,6 +1768,8 @@ function Dashboard({
   )
   const myLeaderboard = leaders[myLeaderboardIndex]
   const myRank = myLeaderboard?.rank ?? (myLeaderboardIndex >= 0 ? myLeaderboardIndex + 1 : -1)
+  const myPracticeCount = myLeaderboard?.practice_count || 0
+  const needsPractice = !isAdmin && myPracticeCount === 0
   return (
     <>
       <Header
@@ -2002,15 +2004,22 @@ function Dashboard({
                 رتبهٔ تو: {myRank > 0 ? myRank : "—"}
               </strong>
               <small>
-                {showMe
-                  ? "نام کاربری تو در جدول نمایش داده می‌شود"
-                  : "تو در جدول دیگران نمایش داده نمی‌شوی"}
+                {needsPractice
+                  ? "هنوز این هفته تمرینی انجام نداده‌ای؛ یک تمرین انجام بده تا وارد جدول شوی"
+                  : showMe
+                    ? "نام کاربری تو در جدول نمایش داده می‌شود"
+                    : "تو در جدول دیگران نمایش داده نمی‌شوی"}
               </small>
             </div>
             <span className="practice-count">
-              <b>{(myLeaderboard?.practice_count || 0).toLocaleString("fa-IR")}</b> تمرین
+              <b>{myPracticeCount.toLocaleString("fa-IR")}</b> تمرین
             </span>
           </div>
+          {needsPractice && (
+            <button className="btn btn-block leader-cta" onClick={() => go("library")}>
+              یک تمرین انجام بده و وارد جدول شو
+            </button>
+          )}
           <p className="leader-note">
             رتبه‌بندی ابتدای هر هفته از صفر شروع می‌شود.
           </p>

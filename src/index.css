@@ -83,6 +83,7 @@ html[data-theme="light"] .lesson-content article p,html[data-theme="light"] .tex
 .admin-usage i{background:linear-gradient(180deg,var(--gold2),var(--gold))}
 .text-lesson p,.text-lesson li,.plan li,.checkout li,.comparison-scroll tbody td,.admin-table tbody td,.admin-conversations article p,.brand-story p,.testimonial-row blockquote{color:var(--text)}
 .footer>small,.leader-note,.founder-photo{color:var(--muted)}
+.leader-cta{margin-top:14px;font-size:12px}
 .lesson-available,.exercise-completion span,.lesson-completion span,.profile-status,.challenge-action>span,.path-challenge>b,.admin-conversations article.user b{color:var(--success)}
 .auth-message,.library-error,.lesson-completion small,.challenge-action small,.coach-error,.admin-error,.admin-ban,.delete-account{color:var(--danger)}
 .delete-account,.admin-ban{border-color:var(--danger-deep)}
