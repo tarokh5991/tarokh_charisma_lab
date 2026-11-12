@@ -1961,6 +1961,13 @@ function Dashboard({
               <span>نمایش من در جدول</span>
             </button>
           </div>
+          {needsPractice && (
+            <div className="leader-empty-hint" role="status">
+              <span>هنوز این هفته تمرینی انجام نداده‌ای و در جدول نیستی.</span>
+              <span>یک تمرین انجام بده تا وارد لیدربرد شوی.</span>
+              <button onClick={() => go("library")}>رفتن به تمرین‌ها</button>
+            </div>
+          )}
           <div className="leader-list">
             {visibleLeaders.length === 0 ? (
               <p>هنوز تمرینی برای این هفته ثبت نشده است.</p>
@@ -2004,22 +2011,15 @@ function Dashboard({
                 رتبهٔ تو: {myRank > 0 ? myRank : "—"}
               </strong>
               <small>
-                {needsPractice
-                  ? "هنوز این هفته تمرینی انجام نداده‌ای؛ یک تمرین انجام بده تا وارد جدول شوی"
-                  : showMe
-                    ? "نام کاربری تو در جدول نمایش داده می‌شود"
-                    : "تو در جدول دیگران نمایش داده نمی‌شوی"}
+                {showMe
+                  ? "نام کاربری تو در جدول نمایش داده می‌شود"
+                  : "تو در جدول دیگران نمایش داده نمی‌شوی"}
               </small>
             </div>
             <span className="practice-count">
               <b>{myPracticeCount.toLocaleString("fa-IR")}</b> تمرین
             </span>
           </div>
-          {needsPractice && (
-            <button className="btn btn-block leader-cta" onClick={() => go("library")}>
-              یک تمرین انجام بده و وارد جدول شو
-            </button>
-          )}
           <p className="leader-note">
             رتبه‌بندی ابتدای هر هفته از صفر شروع می‌شود.
           </p>
