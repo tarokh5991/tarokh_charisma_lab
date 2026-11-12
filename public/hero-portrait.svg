@@ -1,0 +1,50 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 1400" preserveAspectRatio="xMidYMid slice" role="img" aria-label="ترکیب گرافیکی مشکی و طلایی">
+  <defs>
+    <radialGradient id="glow" cx="62%" cy="34%" r="68%">
+      <stop offset="0%" stop-color="#d6ad5c" stop-opacity="0.33"/>
+      <stop offset="42%" stop-color="#8a6d33" stop-opacity="0.13"/>
+      <stop offset="100%" stop-color="#090909" stop-opacity="0"/>
+    </radialGradient>
+    <linearGradient id="gold" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#f0d190"/>
+      <stop offset="50%" stop-color="#d6ad5c"/>
+      <stop offset="100%" stop-color="#8a6d33"/>
+    </linearGradient>
+    <linearGradient id="fade" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#090909" stop-opacity="0"/>
+      <stop offset="72%" stop-color="#090909" stop-opacity="0.55"/>
+      <stop offset="100%" stop-color="#090909" stop-opacity="0.96"/>
+    </linearGradient>
+  </defs>
+
+  <rect width="1200" height="1400" fill="#090909"/>
+  <rect width="1200" height="1400" fill="url(#glow)"/>
+
+  <g fill="none" stroke="url(#gold)" stroke-linecap="round">
+    <circle cx="760" cy="520" r="118" stroke-opacity="0.85" stroke-width="3"/>
+    <circle cx="760" cy="520" r="196" stroke-opacity="0.42" stroke-width="1.5"/>
+    <circle cx="760" cy="520" r="288" stroke-opacity="0.24" stroke-width="1.5"/>
+    <circle cx="760" cy="520" r="396" stroke-opacity="0.13" stroke-width="1.5"/>
+    <circle cx="760" cy="520" r="516" stroke-opacity="0.08" stroke-width="1.5"/>
+  </g>
+
+  <g stroke="url(#gold)" stroke-linecap="round">
+    <line x1="760" y1="300" x2="760" y2="368" stroke-opacity="0.7" stroke-width="2"/>
+    <line x1="760" y1="672" x2="760" y2="740" stroke-opacity="0.7" stroke-width="2"/>
+    <line x1="540" y1="520" x2="608" y2="520" stroke-opacity="0.7" stroke-width="2"/>
+    <line x1="912" y1="520" x2="980" y2="520" stroke-opacity="0.7" stroke-width="2"/>
+  </g>
+
+  <g fill="url(#gold)">
+    <rect x="712" y="492" width="96" height="3" rx="1.5" opacity="0.9"/>
+    <rect x="736" y="512" width="48" height="2" rx="1" opacity="0.55"/>
+    <circle cx="760" cy="520" r="5"/>
+  </g>
+
+  <g stroke="url(#gold)" stroke-width="1.5" opacity="0.35" fill="none">
+    <path d="M120 1180 C 300 1040, 470 1260, 660 1090 S 1010 980, 1120 1080"/>
+    <path d="M120 1240 C 330 1120, 500 1320, 700 1160 S 1020 1060, 1120 1150"/>
+  </g>
+
+  <rect width="1200" height="1400" fill="url(#fade)"/>
+</svg>
