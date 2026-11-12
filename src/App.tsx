@@ -1445,6 +1445,7 @@ function Dashboard({
   session,
   onOpenLesson,
   activePlan,
+  isAdmin = false,
 }: {
   go: (p: Page) => void
   onLogout: () => void
@@ -1452,6 +1453,7 @@ function Dashboard({
   session: AuthSession
   onOpenLesson: (lesson: PublishedLesson) => void
   activePlan: ActivePlan | null
+  isAdmin?: boolean
 }) {
   const [showLeaders, setShowLeaders] = useState(false)
   const [showMe, setShowMe] = useState(true)
@@ -1765,6 +1767,7 @@ function Dashboard({
     (leader) => leader.user_id === session.user.id,
   )
   const myLeaderboard = leaders[myLeaderboardIndex]
+  const myRank = myLeaderboard?.rank ?? (myLeaderboardIndex >= 0 ? myLeaderboardIndex + 1 : -1)
   return (
     <>
       <Header
@@ -1961,11 +1964,11 @@ function Dashboard({
               <p>هنوز تمرینی برای این هفته ثبت نشده است.</p>
             ) : (
               visibleLeaders
-                .slice(0, showLeaders ? 10 : 3)
+                .slice(0, showLeaders ? (isAdmin ? visibleLeaders.length : 20) : 3)
                 .map((leader) => {
-                  const rank = leaders.findIndex(
-                    (item) => item.user_id === leader.user_id,
-                  ) + 1
+                  const rank =
+                    leader.rank ??
+                    leaders.findIndex((item) => item.user_id === leader.user_id) + 1
                   const name = leader.username || "کاربر بدون نام"
                   return (
                     <div className="leader-row" key={leader.user_id}>
@@ -1984,7 +1987,11 @@ function Dashboard({
             className="show-leaders"
             onClick={() => setShowLeaders(!showLeaders)}
           >
-            {showLeaders ? "نمایش سه نفر اول" : "مشاهده‌ی همه"}
+            {showLeaders
+              ? "نمایش سه نفر اول"
+              : isAdmin
+                ? "مشاهده‌ی همه"
+                : "مشاهده‌ی ۲۰ نفر اول"}
           </button>
           <div className="my-rank">
             <span className="leader-avatar">
@@ -1992,7 +1999,7 @@ function Dashboard({
             </span>
             <div>
               <strong>
-                رتبهٔ تو: {myLeaderboardIndex >= 0 ? myLeaderboardIndex + 1 : "—"}
+                رتبهٔ تو: {myRank > 0 ? myRank : "—"}
               </strong>
               <small>
                 {showMe
@@ -5016,6 +5023,7 @@ export default function App() {
           session={session!}
           onOpenLesson={openLesson}
           activePlan={activePlan}
+          isAdmin={profile?.role === "admin"}
         />
       ) : visiblePage === "library" ? (
         <Library

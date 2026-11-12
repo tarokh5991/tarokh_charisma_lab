@@ -959,6 +959,7 @@ export type WeeklyLeaderboardEntry = {
   user_id: string
   username: string | null
   practice_count: number
+  rank?: number
 }
 
 export async function getWeeklyLeaderboard(session: AuthSession) {
