@@ -22,6 +22,7 @@ export type UserProfile = {
   display_name?: string | null
   is_banned: boolean
   banned_until: string | null
+  show_in_leaderboard?: boolean
 }
 
 function requireConfig(): { url: string; anonKey: string } {
@@ -222,7 +223,7 @@ export async function getUserProfile(session: AuthSession) {
   const { anonKey } = requireConfig()
   const response = await fetch(
     endpoint(
-      `/rest/v1/profiles?id=eq.${encodeURIComponent(session.user.id)}&select=id,role,username,display_name,is_banned,banned_until`,
+      `/rest/v1/profiles?id=eq.${encodeURIComponent(session.user.id)}&select=id,role,username,display_name,is_banned,banned_until,show_in_leaderboard`,
     ),
     {
       headers: {
@@ -1242,6 +1243,26 @@ export async function updateUserProfile(
     )
   }
   return (await response.json().catch(() => [])) as UserProfile[]
+}
+
+export async function setLeaderboardVisibility(
+  session: AuthSession,
+  visible: boolean,
+) {
+  const { anonKey } = requireConfig()
+  const response = await fetch(
+    endpoint(`/rest/v1/profiles?id=eq.${encodeURIComponent(session.user.id)}`),
+    {
+      method: "PATCH",
+      headers: {
+        apikey: anonKey,
+        Authorization: `Bearer ${session.access_token}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({ show_in_leaderboard: visible }),
+    },
+  )
+  if (!response.ok) throw new Error("ذخیرهٔ تنظیم نمایش در جدول انجام نشد.")
 }
 
 export function getStoredSession(): AuthSession | null {

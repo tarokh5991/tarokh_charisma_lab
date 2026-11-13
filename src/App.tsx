@@ -37,6 +37,7 @@ import {
   saveCoachMessage,
   saveSession,
   setAdminUserBan,
+  setLeaderboardVisibility,
   setLessonPublished,
   setAdminBetaFeedbackFeatured,
   signOut,
@@ -1457,6 +1458,7 @@ function Dashboard({
 }) {
   const [showLeaders, setShowLeaders] = useState(false)
   const [showMe, setShowMe] = useState(true)
+  const [showMeSaving, setShowMeSaving] = useState(false)
   const [leaders, setLeaders] = useState<WeeklyLeaderboardEntry[]>([])
   const [lessons, setLessons] = useState<PublishedLesson[]>([])
   const [completedIds, setCompletedIds] = useState<Set<string>>(new Set())
@@ -1690,7 +1692,25 @@ function Dashboard({
     getWeeklyLeaderboard(session)
       .then(setLeaders)
       .catch(() => setLeaders([]))
+    getUserProfile(session)
+      .then((profile) => {
+        if (profile?.show_in_leaderboard !== undefined)
+          setShowMe(profile.show_in_leaderboard)
+      })
+      .catch(() => {})
   }, [session])
+  async function toggleShowMe() {
+    const next = !showMe
+    setShowMe(next)
+    setShowMeSaving(true)
+    try {
+      await setLeaderboardVisibility(session, next)
+    } catch {
+      setShowMe(!next)
+    } finally {
+      setShowMeSaving(false)
+    }
+  }
   const completedCount = completedIds.size
   const unlockedLessons = lessons.filter(
     (lesson, index) => index === 0 || completedIds.has(lessons[index - 1].id),
@@ -1959,7 +1979,8 @@ function Dashboard({
               className={`privacy-toggle ${showMe ? "on" : ""}`}
               role="switch"
               aria-checked={showMe}
-              onClick={() => setShowMe(!showMe)}
+              disabled={showMeSaving}
+              onClick={toggleShowMe}
             >
               <i />
               <span>نمایش من در جدول</span>
