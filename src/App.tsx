@@ -1446,7 +1446,6 @@ function Dashboard({
   session,
   onOpenLesson,
   activePlan,
-  isAdmin = false,
 }: {
   go: (p: Page) => void
   onLogout: () => void
@@ -1454,15 +1453,11 @@ function Dashboard({
   session: AuthSession
   onOpenLesson: (lesson: PublishedLesson) => void
   activePlan: ActivePlan | null
-  isAdmin?: boolean
 }) {
-  const [showLeaders, setShowLeaders] = useState(false)
-  const [showMe, setShowMe] = useState(true)
-  const [showMeSaving, setShowMeSaving] = useState(false)
-  const [leaders, setLeaders] = useState<WeeklyLeaderboardEntry[]>([])
   const [lessons, setLessons] = useState<PublishedLesson[]>([])
   const [completedIds, setCompletedIds] = useState<Set<string>>(new Set())
   const [streak, setStreak] = useState(0)
+  const [exercisesCompleted, setExercisesCompleted] = useState(0)
   const [history, setHistory] = useState<Array<{
     title: string
     type: string
@@ -1625,6 +1620,9 @@ function Dashboard({
           ),
         )
         setRecommendedDimensions(recommendations)
+        setExercisesCompleted(
+          progress.filter((item) => item.exercise_completed_at).length,
+        )
         setHistory(
           progress
             .flatMap((item) => {
@@ -1688,29 +1686,6 @@ function Dashboard({
       })
       .catch(() => {})
   }, [session])
-  useEffect(() => {
-    getWeeklyLeaderboard(session)
-      .then(setLeaders)
-      .catch(() => setLeaders([]))
-    getUserProfile(session)
-      .then((profile) => {
-        if (profile?.show_in_leaderboard !== undefined)
-          setShowMe(profile.show_in_leaderboard)
-      })
-      .catch(() => {})
-  }, [session])
-  async function toggleShowMe() {
-    const next = !showMe
-    setShowMe(next)
-    setShowMeSaving(true)
-    try {
-      await setLeaderboardVisibility(session, next)
-    } catch {
-      setShowMe(!next)
-    } finally {
-      setShowMeSaving(false)
-    }
-  }
   const completedCount = completedIds.size
   const unlockedLessons = lessons.filter(
     (lesson, index) => index === 0 || completedIds.has(lessons[index - 1].id),
@@ -1780,20 +1755,6 @@ function Dashboard({
       setMonthlyChallengeSaving(false)
     }
   }
-  const visibleLeaders = leaders.filter(
-    (leader) =>
-      (isAdmin || leader.practice_count > 0) &&
-      (showMe || leader.user_id !== session.user.id),
-  )
-  const myLeaderboardIndex = leaders.findIndex(
-    (leader) => leader.user_id === session.user.id,
-  )
-  const myLeaderboard = leaders[myLeaderboardIndex]
-  const myPracticeCount = myLeaderboard?.practice_count || 0
-  const needsPractice = !isAdmin && myPracticeCount === 0
-  const myRank = needsPractice
-    ? -1
-    : (myLeaderboard?.rank ?? (myLeaderboardIndex >= 0 ? myLeaderboardIndex + 1 : -1))
   return (
     <>
       <Header
@@ -1969,85 +1930,21 @@ function Dashboard({
             <p>هنوز فعالیتی ثبت نشده است.</p>
           )}
         </section>
-        <section className="leaderboard">
-          <div className="leader-head">
-            <div>
-              <span className="eyebrow">تمرین‌های انجام‌شده در هفته</span>
-              <h3>برترین‌های این هفته</h3>
-            </div>
-            <button
-              className={`privacy-toggle ${showMe ? "on" : ""}`}
-              role="switch"
-              aria-checked={showMe}
-              disabled={showMeSaving}
-              onClick={toggleShowMe}
-            >
-              <i />
-              <span>نمایش من در جدول</span>
-            </button>
+        <section className="practice-total">
+          <div>
+            <span className="eyebrow">مجموع تمرین‌های انجام‌شده</span>
+            <h3>
+              <b>{exercisesCompleted.toLocaleString("fa-IR")}</b> تمرین
+            </h3>
+            <p>
+              {exercisesCompleted === 0
+                ? "هنوز تمرینی ثبت نکرده‌ای؛ اولین تمرین را از درس‌ها شروع کن."
+                : `در کل ${exercisesCompleted.toLocaleString("fa-IR")} تمرین انجام داده‌ای.`}
+            </p>
           </div>
-          {needsPractice && (
-            <div className="leader-empty-hint" role="status">
-              <span>هنوز این هفته تمرینی انجام نداده‌ای و در جدول نیستی.</span>
-              <span>یک تمرین انجام بده تا وارد لیدربرد شوی.</span>
-              <button onClick={() => go("library")}>رفتن به تمرین‌ها</button>
-            </div>
-          )}
-          <div className="leader-list">
-            {visibleLeaders.length === 0 ? (
-              <p>هنوز تمرینی برای این هفته ثبت نشده است.</p>
-            ) : (
-              visibleLeaders
-                .slice(0, showLeaders ? (isAdmin ? visibleLeaders.length : 20) : 3)
-                .map((leader) => {
-                  const rank =
-                    leader.rank ??
-                    leaders.findIndex((item) => item.user_id === leader.user_id) + 1
-                  const name = leader.username || "کاربر بدون نام"
-                  return (
-                    <div className="leader-row" key={leader.user_id}>
-                      <b className="rank">{rank}</b>
-                      <span className="leader-avatar">{name.slice(0, 1)}</span>
-                      <strong>{name}</strong>
-                      <span className="practice-count">
-                        <b>{leader.practice_count.toLocaleString("fa-IR")}</b> تمرین
-                      </span>
-                    </div>
-                  )
-                })
-            )}
-          </div>
-          <button
-            className="show-leaders"
-            onClick={() => setShowLeaders(!showLeaders)}
-          >
-            {showLeaders
-              ? "نمایش سه نفر اول"
-              : isAdmin
-                ? "مشاهده‌ی همه"
-                : "مشاهده‌ی ۲۰ نفر اول"}
+          <button onClick={() => go("library")}>
+            {exercisesCompleted === 0 ? "رفتن به تمرین‌ها" : "ادامهٔ تمرین‌ها"}
           </button>
-          <div className="my-rank">
-            <span className="leader-avatar">
-              {(displayName || "تو").slice(0, 1)}
-            </span>
-            <div>
-              <strong>
-                رتبهٔ تو: {myRank > 0 ? myRank : "—"}
-              </strong>
-              <small>
-                {showMe
-                  ? "نام کاربری تو در جدول نمایش داده می‌شود"
-                  : "تو در جدول دیگران نمایش داده نمی‌شوی"}
-              </small>
-            </div>
-            <span className="practice-count">
-              <b>{myPracticeCount.toLocaleString("fa-IR")}</b> تمرین
-            </span>
-          </div>
-          <p className="leader-note">
-            رتبه‌بندی ابتدای هر هفته از صفر شروع می‌شود.
-          </p>
         </section>
       </main>
       <BottomNav page="dashboard" go={go} />
@@ -2197,6 +2094,10 @@ function Profile({
   const [feedbackConsent, setFeedbackConsent] = useState(false)
   const [sendingFeedback, setSendingFeedback] = useState(false)
   const [feedbackStatus, setFeedbackStatus] = useState("")
+  const [showInLeaderboard, setShowInLeaderboard] = useState(
+    profile?.show_in_leaderboard ?? true,
+  )
+  const [savingVisibility, setSavingVisibility] = useState(false)
   const [newPassword, setNewPassword] = useState("")
   const [newPasswordConfirmation, setNewPasswordConfirmation] = useState("")
   const [passwordSaving, setPasswordSaving] = useState(false)
@@ -2352,6 +2253,36 @@ function Profile({
               <strong className="profile-status">فعال</strong>
             </div>
           </div>
+        </section>
+        <section className="purchase-history">
+          <div className="section-head">
+            <h3>نمایش در لیدربرد</h3>
+          </div>
+          <p>
+            اگر خاموش باشد، نام تو در جدول هفتگی برای دیگران دیده نمی‌شود؛
+            رتبه و تعداد تمرین خودت همچنان نمایش داده می‌شود.
+          </p>
+          <button
+            className={`privacy-toggle ${showInLeaderboard ? "on" : ""}`}
+            role="switch"
+            aria-checked={showInLeaderboard}
+            disabled={savingVisibility}
+            onClick={async () => {
+              const next = !showInLeaderboard
+              setShowInLeaderboard(next)
+              setSavingVisibility(true)
+              try {
+                await setLeaderboardVisibility(session, next)
+              } catch {
+                setShowInLeaderboard(!next)
+              } finally {
+                setSavingVisibility(false)
+              }
+            }}
+          >
+            <i />
+            <span>{showInLeaderboard ? "روشن" : "خاموش"}</span>
+          </button>
         </section>
         <section className="purchase-history password-settings">
           <div className="section-head">
@@ -3031,6 +2962,7 @@ const adminTabs = [
   ["users", "کاربران"],
   ["orders", "سفارش‌ها"],
   ["lessons", "درس‌ها"],
+  ["leaderboard", "لیدربرد"],
 ] as const
 
 function Admin({
@@ -3044,6 +2976,7 @@ function Admin({
   const [plans, setPlans] = useState<AdminPlan[]>([])
   const [errorEvents, setErrorEvents] = useState<AdminErrorEvent[]>([])
   const [betaFeedback, setBetaFeedback] = useState<AdminBetaFeedback[]>([])
+  const [leaders, setLeaders] = useState<WeeklyLeaderboardEntry[]>([])
   const [selectedUser, setSelectedUser] = useState<AdminUserDetail | null>(null)
   const [loadingUser, setLoadingUser] = useState(false)
   const [banPeriod, setBanPeriod] = useState<AdminBanPeriod>("three_days")
@@ -3084,6 +3017,7 @@ function Admin({
       setPlans(nextPlans)
       setErrorEvents(nextErrorEvents)
       setBetaFeedback(nextBetaFeedback)
+      setLeaders(await getWeeklyLeaderboard(session).catch(() => []))
     } catch (error) {
       setMessage(
         error instanceof Error
@@ -3883,6 +3817,41 @@ function Admin({
                                       : "ناموفق"}
                               </td>
                               <td>{date(order.created_at)}</td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                  )}
+                </section>
+              )}
+              {tab === "leaderboard" && (
+                <section className="admin-panel">
+                  <h3>لیدربرد هفتگی</h3>
+                  <p className="admin-hint">
+                    رتبه‌بندی بر اساس تمرین‌های انجام‌شده از ابتدای همین هفته
+                    ساخته می‌شود و ابتدای هفتهٔ بعد از صفر شروع می‌شود.
+                  </p>
+                  {leaders.length === 0 ? (
+                    <p className="admin-hint">
+                      هنوز هیچ کاربری این هفته تمرینی انجام نداده است.
+                    </p>
+                  ) : (
+                    <div className="admin-table-wrap">
+                      <table className="admin-table">
+                        <thead>
+                          <tr>
+                            <th>رتبه</th>
+                            <th>کاربر</th>
+                            <th>تمرین این هفته</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {leaders.map((leader, index) => (
+                            <tr key={leader.user_id}>
+                              <td>{formatNumber(leader.rank ?? index + 1)}</td>
+                              <td>{leader.username || "کاربر بدون نام"}</td>
+                              <td>{formatNumber(leader.practice_count)}</td>
                             </tr>
                           ))}
                         </tbody>
@@ -5057,7 +5026,6 @@ export default function App() {
           session={session!}
           onOpenLesson={openLesson}
           activePlan={activePlan}
-          isAdmin={profile?.role === "admin"}
         />
       ) : visiblePage === "library" ? (
         <Library
