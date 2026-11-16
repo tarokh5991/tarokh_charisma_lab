@@ -1936,14 +1936,14 @@ function Dashboard({
         </section>
         <section className="practice-total">
           <div>
-            <span className="eyebrow">تمرین‌های انجام‌شده در این هفته</span>
+            <span className="eyebrow">نفراتی که این هفته تمرین انجام داده‌اند</span>
             <h3>
-              <b>{weeklyTotal.toLocaleString("fa-IR")}</b> تمرین
+              <b>{weeklyTotal.toLocaleString("fa-IR")}</b> نفر
             </h3>
             <p>
               {weeklyTotal === 0
-                ? "هنوز این هفته هیچ تمرینی ثبت نشده است؛ می‌توانی اولین نفر باشی."
-                : `در کل ${weeklyTotal.toLocaleString("fa-IR")} تمرین توسط کاربران سایت در این هفته انجام شده است.`}
+                ? "هنوز این هفته کسی تمرینی ثبت نکرده است؛ می‌توانی اولین نفر باشی."
+                : `در این هفته ${weeklyTotal.toLocaleString("fa-IR")} نفر از کاربران سایت تمرین انجام داده‌اند.`}
             </p>
           </div>
           <button onClick={() => go("library")}>رفتن به تمرین‌ها</button>

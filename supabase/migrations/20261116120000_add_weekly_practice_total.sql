@@ -5,7 +5,7 @@ stable
 security definer
 set search_path = public
 as $$
-  select coalesce(count(*), 0)::integer
+  select count(distinct progress.user_id)::integer
   from public.lesson_progress progress
   join public.profiles profiles on profiles.id = progress.user_id
   where progress.exercise_completed_at >= date_trunc('week', now())
