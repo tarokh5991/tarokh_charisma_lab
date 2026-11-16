@@ -978,6 +978,24 @@ export async function getWeeklyLeaderboard(session: AuthSession) {
   return (await response.json()) as WeeklyLeaderboardEntry[]
 }
 
+export async function getWeeklyPracticeTotal(session: AuthSession) {
+  const { anonKey } = requireConfig()
+  const response = await fetch(
+    endpoint("/rest/v1/rpc/weekly_practice_total"),
+    {
+      method: "POST",
+      headers: {
+        apikey: anonKey,
+        Authorization: `Bearer ${session.access_token}`,
+        "Content-Type": "application/json",
+      },
+      body: "{}",
+    },
+  )
+  if (!response.ok) throw new Error("دریافت تعداد تمرین‌های هفته انجام نشد.")
+  return (await response.json()) as number
+}
+
 export type AdminLesson = {
   id: string
   slug: string

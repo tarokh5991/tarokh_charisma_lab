@@ -24,6 +24,7 @@ import {
   getPathChallengeProgress,
   getMonthlyChallengeProgress,
   getWeeklyLeaderboard,
+  getWeeklyPracticeTotal,
   getPublishedLessons,
   getPurchaseHistory,
   getStoredSession,
@@ -1457,7 +1458,7 @@ function Dashboard({
   const [lessons, setLessons] = useState<PublishedLesson[]>([])
   const [completedIds, setCompletedIds] = useState<Set<string>>(new Set())
   const [streak, setStreak] = useState(0)
-  const [exercisesCompleted, setExercisesCompleted] = useState(0)
+  const [weeklyTotal, setWeeklyTotal] = useState(0)
   const [history, setHistory] = useState<Array<{
     title: string
     type: string
@@ -1620,9 +1621,7 @@ function Dashboard({
           ),
         )
         setRecommendedDimensions(recommendations)
-        setExercisesCompleted(
-          progress.filter((item) => item.exercise_completed_at).length,
-        )
+
         setHistory(
           progress
             .flatMap((item) => {
@@ -1685,6 +1684,11 @@ function Dashboard({
           .catch(() => {})
       })
       .catch(() => {})
+  }, [session])
+  useEffect(() => {
+    getWeeklyPracticeTotal(session)
+      .then(setWeeklyTotal)
+      .catch(() => setWeeklyTotal(0))
   }, [session])
   const completedCount = completedIds.size
   const unlockedLessons = lessons.filter(
@@ -1932,19 +1936,17 @@ function Dashboard({
         </section>
         <section className="practice-total">
           <div>
-            <span className="eyebrow">مجموع تمرین‌های انجام‌شده</span>
+            <span className="eyebrow">تمرین‌های انجام‌شده در این هفته</span>
             <h3>
-              <b>{exercisesCompleted.toLocaleString("fa-IR")}</b> تمرین
+              <b>{weeklyTotal.toLocaleString("fa-IR")}</b> تمرین
             </h3>
             <p>
-              {exercisesCompleted === 0
-                ? "هنوز تمرینی ثبت نکرده‌ای؛ اولین تمرین را از درس‌ها شروع کن."
-                : `در کل ${exercisesCompleted.toLocaleString("fa-IR")} تمرین انجام داده‌ای.`}
+              {weeklyTotal === 0
+                ? "هنوز این هفته هیچ تمرینی ثبت نشده است؛ می‌توانی اولین نفر باشی."
+                : `در کل ${weeklyTotal.toLocaleString("fa-IR")} تمرین توسط کاربران سایت در این هفته انجام شده است.`}
             </p>
           </div>
-          <button onClick={() => go("library")}>
-            {exercisesCompleted === 0 ? "رفتن به تمرین‌ها" : "ادامهٔ تمرین‌ها"}
-          </button>
+          <button onClick={() => go("library")}>رفتن به تمرین‌ها</button>
         </section>
       </main>
       <BottomNav page="dashboard" go={go} />
